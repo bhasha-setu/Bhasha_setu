@@ -32,3 +32,4 @@ npx expo start
 Press `a` in the terminal to launch on an Android emulator, or scan the QR code with **Expo Go** on an Android device.
 
 For full technical specifications, architecture details, and component props contracts, refer to the [Frontend TRD](./bhasha-setu-frontend/docs/TRD.md) and [Frontend README](./bhasha-setu-frontend/README.md).
+
