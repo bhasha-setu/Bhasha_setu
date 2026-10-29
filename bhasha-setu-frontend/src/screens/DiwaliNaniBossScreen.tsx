@@ -22,7 +22,7 @@ import { triggerKeycapHaptic, triggerSuccessHaptic } from '@/lib/services/haptic
 
 export const DiwaliNaniBossScreen: React.FC = () => {
   const router = useRouter();
-  const { chatHistory, addChatMessage, addXp, unlockArtifact } = useFrontendStore();
+  const { chatHistory, addChatMessage, addXp, unlockArtifact, completeLevel } = useFrontendStore();
 
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -47,12 +47,11 @@ export const DiwaliNaniBossScreen: React.FC = () => {
     setInputText('');
     addXp(25);
 
-    // Scroll to bottom
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 150);
 
-    // Nani AI response after short delay
+    // Nani AI response
     setTimeout(() => {
       addChatMessage({
         id: `nani-reply-${Date.now()}`,
@@ -63,6 +62,8 @@ export const DiwaliNaniBossScreen: React.FC = () => {
         timestamp: '10:16 AM',
       });
       triggerSuccessHaptic();
+      unlockArtifact('golden-diya');
+      completeLevel('LEVEL_4');
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 150);
@@ -86,8 +87,9 @@ export const DiwaliNaniBossScreen: React.FC = () => {
           respectWord: 'आप',
           timestamp: '10:16 AM',
         });
-        addXp(30);
+        addXp(100);
         unlockArtifact('golden-diya');
+        completeLevel('LEVEL_4');
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 150);

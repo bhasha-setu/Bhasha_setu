@@ -12,11 +12,24 @@ import { ActiveRecallHeroCard } from '@/components/dashboard/ActiveRecallHeroCar
 import { RiverCrossingTrail } from '@/components/dashboard/RiverCrossingTrail';
 import { QuestNodeCard } from '@/components/dashboard/QuestNodeCard';
 import { MilestoneChestBar } from '@/components/dashboard/MilestoneChestBar';
+import { ArtifactsModal } from '@/components/dashboard/ArtifactsModal';
+import { ProfileModal } from '@/components/dashboard/ProfileModal';
 
 export const QuestMapScreen: React.FC = () => {
   const router = useRouter();
   const { xp, streak, unlockedArtifacts } = useFrontendStore();
   const [activeTab, setActiveTab] = useState<BottomTabType>('quest');
+  const [showArtifactsModal, setShowArtifactsModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const handleTabPress = (tab: BottomTabType) => {
+    setActiveTab(tab);
+    if (tab === 'artifacts') {
+      setShowArtifactsModal(true);
+    } else if (tab === 'profile') {
+      setShowProfileModal(true);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -99,7 +112,24 @@ export const QuestMapScreen: React.FC = () => {
       </ScrollView>
 
       {/* Docked Bottom Tab Bar */}
-      <BottomTabBar activeTab={activeTab} onTabPress={setActiveTab} />
+      <BottomTabBar activeTab={activeTab} onTabPress={handleTabPress} />
+
+      {/* Interactive Modals */}
+      <ArtifactsModal
+        visible={showArtifactsModal}
+        onClose={() => {
+          setShowArtifactsModal(false);
+          setActiveTab('quest');
+        }}
+      />
+
+      <ProfileModal
+        visible={showProfileModal}
+        onClose={() => {
+          setShowProfileModal(false);
+          setActiveTab('quest');
+        }}
+      />
     </SafeAreaView>
   );
 };
