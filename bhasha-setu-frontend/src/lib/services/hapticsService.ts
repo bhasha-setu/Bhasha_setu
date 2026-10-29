@@ -1,15 +1,35 @@
 // src/lib/services/hapticsService.ts
 // Wraps expo-haptics to trigger tactile vibrations on key press & star unlocks
 
+import * as Haptics from 'expo-haptics';
+import { Platform } from 'react-native';
+
 export function triggerKeycapHaptic(): void {
-  // TODO: Trigger light tactile impact on Devanagari keyboard key press using expo-haptics
+  try {
+    if (Platform.OS !== 'web') {
+      void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
+  } catch {
+    // Graceful fallback when haptics are unsupported
+  }
 }
 
 export function triggerSuccessHaptic(): void {
-  // TODO: Trigger success notification feedback when completing quest or unlocking Golden Diya
+  try {
+    if (Platform.OS !== 'web') {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    }
+  } catch {
+    // Graceful fallback
+  }
 }
 
 export function triggerWarningHaptic(): void {
-  // TODO: Trigger warning haptic feedback on incorrect answer or error
+  try {
+    if (Platform.OS !== 'web') {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    }
+  } catch {
+    // Graceful fallback
+  }
 }
-

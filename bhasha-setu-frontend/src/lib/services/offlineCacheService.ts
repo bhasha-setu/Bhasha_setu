@@ -1,5 +1,5 @@
 // src/lib/services/offlineCacheService.ts
-// MMKV local storage for offline lesson state
+// MMKV local storage for offline lesson state with graceful memory fallback
 
 export interface LessonProgressCache {
   levelId: string;
@@ -9,16 +9,58 @@ export interface LessonProgressCache {
   unlockedArtifacts: string[];
 }
 
-export function saveLessonProgress(_progress: LessonProgressCache): void {
-  // TODO: Persist lesson progress and offline state into react-native-mmkv storage
+const memoryStore = new Map<string, string>();
+
+let mmkvInstance: {
+  getString: (key: string) => string | undefined;
+  set: (key: string, value: string) => void;
+  clearAll: () => void;
+} | null = null;
+
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { MMKV } = require('react-native-mmkv');
+  mmkvInstance = new MMKV({ id: 'bhasha-setu-offline-cache' });
+} catch {
+  // Safe in-memory fallback for web and environments without native MMKV binary
+  mmkvInstance = {
+    getString: (key: string) => memoryStore.get(key),
+    set: (key: string, value: string) => {
+      memoryStore.set(key, value);
+    },
+    clearAll: () => {
+      memoryStore.clear();
+    },
+  };
 }
 
-export function getCachedLessonProgress(_levelId: string): LessonProgressCache | null {
-  // TODO: Retrieve cached lesson progress from react-native-mmkv storage
-  return null;
+const STORAGE_PREFIX = 'bhasha_setu_lesson_';
+
+export function saveLessonProgress(progress: LessonProgressCache): void {
+  try {
+    const key = `${STORAGE_PREFIX}${progress.levelId}`;
+    mmkvInstance?.set(key, JSON.stringify(progress));
+  } catch (err) {
+    console.warn('[offlineCache] Failed to save progress:', err);
+  }
+}
+
+export function getCachedLessonProgress(levelId: string): LessonProgressCache | null {
+  try {
+    const key = `${STORAGE_PREFIX}${levelId}`;
+    const raw = mmkvInstance?.getString(key);
+    if (!raw) return null;
+    return JSON.parse(raw) as LessonProgressCache;
+  } catch (err) {
+    console.warn('[offlineCache] Failed to read progress:', err);
+    return null;
+  }
 }
 
 export function clearOfflineCache(): void {
-  // TODO: Clear cached lesson progress from react-native-mmkv storage
+  try {
+    mmkvInstance?.clearAll();
+  } catch (err) {
+    console.warn('[offlineCache] Failed to clear cache:', err);
+  }
 }
-

@@ -1,83 +1,291 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+// src/screens/SplashLoadingScreen.tsx
+import React, { useEffect, useState } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Animated,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { zenColors, zenRadius, zenSpacing } from '@/theme/zenTheme';
+import { SoundwaveBars } from '@/components/menu/BrandLogoBadge';
 
 export const SplashLoadingScreen: React.FC = () => {
   const router = useRouter();
+  const [progress, setProgress] = useState(15);
+  const progressAnim = React.useRef(new Animated.Value(15)).current;
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        const next = Math.min(100, prev + Math.floor(Math.random() * 18 + 12));
+        Animated.timing(progressAnim, {
+          toValue: next,
+          duration: 250,
+          useNativeDriver: false,
+        }).start();
+        return next;
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    if (progress >= 100) {
+      const timeout = setTimeout(() => {
+        router.push('/quest-map');
+      }, 450);
+      return () => clearTimeout(timeout);
+    }
+  }, [progress, router]);
+
+  const handleStartNow = () => {
+    router.push('/quest-map');
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>SplashLoadingScreen</Text>
-      <Text style={styles.subtitle}>Zen Loading Screen (Screen 0)</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Top Spacer */}
+        <View style={styles.topSpacer} />
 
-      <View style={styles.navContainer}>
-        <Text style={styles.navHeader}>Navigate to Screen:</Text>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/quest-map')}>
-          <Text style={styles.navButtonText}>1. Quest Map</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/bollywood-studio')}>
-          <Text style={styles.navButtonText}>2. Bollywood Studio</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/cricket-commentary')}>
-          <Text style={styles.navButtonText}>3. Cricket Commentary</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/street-food')}>
-          <Text style={styles.navButtonText}>4. Street Food Masterchef</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={() => router.push('/diwali-nani-boss')}>
-          <Text style={styles.navButtonText}>5. Diwali Nani Boss</Text>
-        </TouchableOpacity>
+        {/* Central Elevated Circle (190px x 190px) */}
+        <View style={styles.heroCircle}>
+          <View style={styles.logoMarkRow}>
+            <Text style={styles.devanagariA}>अ</Text>
+            <View style={styles.archBridge} />
+            <Text style={styles.latinA}>A</Text>
+          </View>
+
+          <View style={styles.soundwaveInCircle}>
+            <SoundwaveBars size="sm" isAnimating={true} colorMode="dual" />
+          </View>
+
+          <Text style={styles.bridgeSubtext}>सेतु • BHASHA SETU</Text>
+        </View>
+
+        {/* Dual-Tone Headings */}
+        <View style={styles.titleContainer}>
+          <Text style={styles.mainTitle}>
+            <Text style={styles.hindiTitle}>भाषा सेतु</Text>
+            <Text style={styles.dotDivider}> • </Text>
+            <Text style={styles.englishTitle}>Bhasha Setu</Text>
+          </Text>
+          <Text style={styles.subtitle}>The Language Bridge</Text>
+          <Text style={styles.tagline}>Connecting Script to Spontaneous Speech</Text>
+        </View>
+
+        {/* Center Animated Large Soundwave */}
+        <View style={styles.largeSoundwaveContainer}>
+          <SoundwaveBars size="lg" isAnimating={true} colorMode="dual" />
+        </View>
+
+        {/* Bottom Loading Card */}
+        <View style={styles.bottomCard}>
+          <View style={styles.loadingStatusRow}>
+            <View style={styles.statusLeft}>
+              <ActivityIndicator size="small" color={zenColors.ochreAccent} />
+              <Text style={styles.statusLabel}>Ready to speak!</Text>
+            </View>
+            <Text style={styles.percentageText}>{progress}%</Text>
+          </View>
+
+          {/* Gradient-like Progress Bar */}
+          <View style={styles.progressTrack}>
+            <Animated.View
+              style={[
+                styles.progressFill,
+                {
+                  width: progressAnim.interpolate({
+                    inputRange: [0, 100],
+                    outputRange: ['0%', '100%'],
+                  }),
+                },
+              ]}
+            />
+          </View>
+
+          {/* Quick Start / Skip Action */}
+          <TouchableOpacity
+            style={styles.startNowButton}
+            onPress={handleStartNow}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.startNowText}>
+              {progress >= 100 ? 'Enter Quest Map →' : 'Skip loading →'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: zenColors.bgCream,
+  },
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: zenSpacing.lg,
+    paddingBottom: zenSpacing.lg,
+  },
+  topSpacer: {
+    height: 12,
+  },
+  heroCircle: {
+    width: 190,
+    height: 190,
+    borderRadius: 95,
+    backgroundColor: zenColors.cardWhite,
+    borderWidth: 5,
+    borderColor: '#F1E6D8',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: zenSpacing.lg,
+    shadowColor: zenColors.espressoText,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 14,
+    elevation: 6,
+    padding: zenSpacing.md,
   },
-  title: {
-    fontSize: 24,
+  logoMarkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  devanagariA: {
+    fontSize: 52,
+    fontWeight: '800',
+    color: zenColors.ochreAccent,
+  },
+  archBridge: {
+    width: 22,
+    height: 4,
+    backgroundColor: zenColors.espressoText,
+    borderRadius: 2,
+    marginHorizontal: 4,
+    marginBottom: 8,
+  },
+  latinA: {
+    fontSize: 52,
+    fontWeight: '800',
+    color: zenColors.sageTeal,
+  },
+  soundwaveInCircle: {
+    marginVertical: 4,
+  },
+  bridgeSubtext: {
+    fontSize: 10,
     fontWeight: '700',
     color: zenColors.espressoText,
-    marginBottom: zenSpacing.xs,
+    letterSpacing: 1.5,
+    marginTop: 4,
+  },
+  titleContainer: {
+    alignItems: 'center',
+    marginVertical: zenSpacing.md,
+  },
+  mainTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  hindiTitle: {
+    color: zenColors.espressoText,
+  },
+  dotDivider: {
+    color: zenColors.borderWarm,
+  },
+  englishTitle: {
+    color: zenColors.ochreAccent,
   },
   subtitle: {
     fontSize: 16,
+    fontWeight: '700',
+    color: zenColors.sageTeal,
+    marginBottom: 4,
+  },
+  tagline: {
+    fontSize: 13,
     color: zenColors.mutedBrown,
-    marginBottom: zenSpacing.xl,
+    textAlign: 'center',
+    fontWeight: '500',
   },
-  navContainer: {
+  largeSoundwaveContainer: {
+    marginVertical: zenSpacing.sm,
+    paddingVertical: zenSpacing.sm,
+  },
+  bottomCard: {
     width: '100%',
-    maxWidth: 320,
-    backgroundColor: zenColors.cardWhite,
-    borderRadius: zenRadius.md,
+    backgroundColor: '#F3ECE2',
+    borderRadius: zenRadius.lg,
+    borderWidth: 1,
+    borderColor: zenColors.borderWarm,
     padding: zenSpacing.md,
-    gap: zenSpacing.sm,
+    shadowColor: zenColors.espressoText,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
-  navHeader: {
-    fontSize: 14,
-    fontWeight: '600',
+  loadingStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: zenSpacing.sm,
+  },
+  statusLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  statusLabel: {
+    fontSize: 13,
+    fontWeight: '700',
     color: zenColors.espressoText,
-    marginBottom: zenSpacing.xs,
   },
-  navButton: {
-    backgroundColor: zenColors.surfaceSand,
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+  percentageText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: zenColors.ochreAccent,
+  },
+  progressTrack: {
+    height: 8,
+    backgroundColor: zenColors.cardWhite,
+    borderRadius: zenRadius.pill,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: zenColors.borderWarm,
+    marginBottom: zenSpacing.sm,
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: zenColors.sageTeal,
     borderRadius: zenRadius.pill,
   },
-  navButtonText: {
-    color: zenColors.espressoText,
-    fontSize: 14,
-    fontWeight: '500',
+  startNowButton: {
+    alignItems: 'center',
+    paddingVertical: 6,
+  },
+  startNowText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: zenColors.mutedBrown,
   },
 });
 
 export default SplashLoadingScreen;
-
