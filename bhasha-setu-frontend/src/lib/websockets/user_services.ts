@@ -1,10 +1,18 @@
 // src/lib/websockets/user_services.ts
 import { bindServerSocketEvents, DownstreamUIHandlers } from './server_services';
+import { WS_BASE_URL, DEFAULT_USER_ID } from '../api/client';
 
 class UserSocketServices {
   private ws: WebSocket | null = null;
+  private currentUrl: string | null = null;
+  private handlers: DownstreamUIHandlers | null = null;
 
-  connect(wsUrl: string, uiHandlers: DownstreamUIHandlers) {
+  connect(
+    wsUrl = `${WS_BASE_URL}?agent=CRICKET_AGENT&userId=${DEFAULT_USER_ID}`,
+    uiHandlers: DownstreamUIHandlers
+  ) {
+    this.currentUrl = wsUrl;
+    this.handlers = uiHandlers;
     this.ws = new WebSocket(wsUrl);
     bindServerSocketEvents(this.ws, uiHandlers);
   }
@@ -23,11 +31,19 @@ class UserSocketServices {
     }
   }
 
+  // Emits real-time stadium roar audio frame
+  emitAudioFrame(sequence: number, decibels: number) {
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ action: 'audio_frame', sequence, db: decibels }));
+    }
+  }
+
   disconnect() {
     this.ws?.close();
     this.ws = null;
+    this.currentUrl = null;
+    this.handlers = null;
   }
 }
 
 export const userSocketService = new UserSocketServices();
-

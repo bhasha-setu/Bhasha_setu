@@ -1,5 +1,5 @@
 // src/screens/CricketCommentaryScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,8 @@ import { PublicSilentTogglePill } from '@/components/buttons/PublicSilentToggleP
 import { ActiveDevanagariInput } from '@/components/inputs/ActiveDevanagariInput';
 import { DevanagariKeyboard } from '@/components/inputs/DevanagariKeyboard';
 import { DockedTealButton } from '@/components/buttons/DockedTealButton';
+import { ApiClient } from '@/lib/api/client';
+import { userSocketService } from '@/lib/websockets/user_services';
 import { triggerKeycapHaptic, triggerSuccessHaptic } from '@/lib/services/hapticsService';
 
 export const CricketCommentaryScreen: React.FC = () => {
@@ -33,18 +35,82 @@ export const CricketCommentaryScreen: React.FC = () => {
   const [typedPhrase, setTypedPhrase] = useState('');
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
 
+  // Dynamic Drill Data from Backend
+  const [drillData, setDrillData] = useState<{
+    promptPart1: string;
+    promptPart2: string;
+    romanPrompt: string;
+    thrillerBadge: string;
+    overNotation: string;
+    dailyFlipPhrase: string;
+    dailyFlipMeaning: string;
+    xpAward: number;
+    audioClipId: string;
+  }>({
+    promptPart1: 'आख़िरी गेंद पर शानदार',
+    promptPart2: 'छक्का!',
+    romanPrompt: '"Aakhiri gend par shaandaar chhakka!"',
+    thrillerBadge: 'MATCH THRILLER • FINAL BALL',
+    overNotation: 'Over 19.6',
+    dailyFlipPhrase: '“आख़िरी मिनट पर”',
+    dailyFlipMeaning: 'At the last minute',
+    xpAward: 35,
+    audioClipId: 'cricket-commentary-crowd',
+  });
+
+  // Fetch dynamic drill configuration on screen mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const drill = await ApiClient.getDrill('CRICKET');
+        if (drill && isMounted) {
+          const meta = drill.metadata || {};
+          setDrillData({
+            promptPart1: 'आख़िरी गेंद पर शानदार',
+            promptPart2: drill.targetWord || 'छक्का!',
+            romanPrompt: drill.romanPrompt ? `"${drill.romanPrompt}"` : '"Aakhiri gend par shaandaar chhakka!"',
+            thrillerBadge: meta.thrillerBadge || 'MATCH THRILLER • FINAL BALL',
+            overNotation: meta.overNotation || 'Over 19.6',
+            dailyFlipPhrase: meta.dailyFlipPhrase || '“आख़िरी मिनट पर”',
+            dailyFlipMeaning: meta.dailyFlipMeaning || 'At the last minute',
+            xpAward: drill.xpAward || 35,
+            audioClipId: drill.audioClipId || 'cricket-commentary-crowd',
+          });
+        }
+      } catch {
+        // Keep initial state
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const handleStartRecording = () => {
     setIsRecording(true);
     triggerKeycapHaptic();
+    userSocketService.emitUserMicChunk('mock_live_audio_chunk', 92);
   };
 
-  const handleStopRecording = () => {
+  const handleStopRecording = async () => {
     setIsRecording(false);
     triggerSuccessHaptic();
     setDecibels(95);
     setRecordedSuccess(true);
-    addXp(35);
+
+    // Evaluate voice turn with backend
+    const evalResult = await ApiClient.evaluateVoiceTurn(
+      'आख़िरी गेंद पर शानदार छक्का!',
+      'CRICKET',
+      95,
+      240
+    );
+
+    const xpEarned = evalResult?.xpAwarded || drillData.xpAward;
+    addXp(xpEarned);
     completeLevel('LEVEL_2');
+    await ApiClient.completeQuestLevel('LEVEL_2', 3, 95);
   };
 
   const handleToggleMic = () => {
@@ -58,19 +124,21 @@ export const CricketCommentaryScreen: React.FC = () => {
     }
   };
 
-  const handlePlayPronunciation = () => {
+  const handlePlayPronunciation = async () => {
     setIsPlayingAudio(true);
+    await ApiClient.playPromptAudio(drillData.audioClipId, 1.0);
     setTimeout(() => {
       setIsPlayingAudio(false);
     }, 2000);
   };
 
-  const handleSilentSubmit = () => {
+  const handleSilentSubmit = async () => {
     if (!typedPhrase.trim()) return;
     triggerSuccessHaptic();
     setRecordedSuccess(true);
-    addXp(35);
+    addXp(drillData.xpAward);
     completeLevel('LEVEL_2');
+    await ApiClient.completeQuestLevel('LEVEL_2', 3, 90);
   };
 
   return (
@@ -84,7 +152,7 @@ export const CricketCommentaryScreen: React.FC = () => {
       <SubHeaderHUD
         categoryOverline="LIVE HINDI VOICE DRILL"
         lessonTitle="Cricket Commentary"
-        comboLabel="Over 19.6"
+        comboLabel={drillData.overNotation}
       />
 
       <ScrollView
@@ -92,20 +160,20 @@ export const CricketCommentaryScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Stadium Roar Meter */}
+        {/* Dynamic Stadium Roar Meter */}
         <StadiumRoarMeterCard decibelPercent={decibels} />
 
-        {/* Center Commentary Prompt Card */}
+        {/* Dynamic Center Commentary Prompt Card */}
         <View style={styles.promptCard}>
           <View style={styles.badgeRow}>
             <View style={styles.thrillerBadge}>
-              <Text style={styles.thrillerText}>MATCH THRILLER • FINAL BALL</Text>
+              <Text style={styles.thrillerText}>{drillData.thrillerBadge}</Text>
             </View>
           </View>
 
-          <Text style={styles.hindiPromptText}>आख़िरी गेंद पर शानदार</Text>
-          <Text style={styles.hindiPromptText}>छक्का!</Text>
-          <Text style={styles.romanPromptText}>"Aakhiri gend par shaandaar chhakka!"</Text>
+          <Text style={styles.hindiPromptText}>{drillData.promptPart1}</Text>
+          <Text style={styles.hindiPromptText}>{drillData.promptPart2}</Text>
+          <Text style={styles.romanPromptText}>{drillData.romanPrompt}</Text>
 
           <TouchableOpacity
             style={styles.listenPill}
@@ -119,27 +187,27 @@ export const CricketCommentaryScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Daily Flip Banner */}
+        {/* Dynamic Daily Flip Banner */}
         <DailyFlipBanner
-          hindiPhrase="“आख़िरी मिनट पर”"
-          englishMeaning="At the last minute"
+          hindiPhrase={drillData.dailyFlipPhrase}
+          englishMeaning={drillData.dailyFlipMeaning}
         />
 
         {/* Live Voice Capture Card */}
         <LiveVoiceCaptureCard
           clarityPercent={90}
-          capturedText="“...गेंद पर शानदार छक्का!”"
-          highlightWord="छक्का!"
-          xpBonus={35}
+          capturedText={`“...गेंद पर शानदार ${drillData.promptPart2}”`}
+          highlightWord={drillData.promptPart2}
+          xpBonus={drillData.xpAward}
           isListening={isRecording}
           pitchDescription="Microphone detected pitch: Crisp & Exuberant"
         />
 
-        {/* Success Milestone Action */}
+        {/* Dynamic Success Milestone Action */}
         {recordedSuccess && (
           <View style={styles.successCard}>
             <Text style={styles.successCardTitle}>
-              🏏 Match-Winning Roar Recorded! (+35 XP)
+              🏏 Match-Winning Roar Recorded! (+{drillData.xpAward} XP)
             </Text>
             <TouchableOpacity
               style={styles.nextLevelButton}
@@ -165,7 +233,7 @@ export const CricketCommentaryScreen: React.FC = () => {
             />
             <View style={styles.submitRow}>
               <DockedTealButton
-                label="Submit Commentary • +35 XP →"
+                label={`Submit Commentary • +${drillData.xpAward} XP →`}
                 onPress={handleSilentSubmit}
                 disabled={!typedPhrase.trim()}
               />
@@ -174,46 +242,31 @@ export const CricketCommentaryScreen: React.FC = () => {
         )}
       </ScrollView>
 
-      {/* Bottom Controls Area */}
-      {!isSilentMode ? (
-        <View style={styles.bottomControls}>
-          <TerracottaMicButton
-            size={64}
-            isListening={isRecording}
-            onPress={handleToggleMic}
-            onPressIn={handleStartRecording}
-            onPressOut={handleStopRecording}
+      {/* Footer Controls: Silent Mode Toggle & Large Terracotta Mic CTA */}
+      <View style={styles.footerContainer}>
+        <View style={styles.toggleRow}>
+          <PublicSilentTogglePill
+            isSilentMode={isSilentMode}
+            onToggle={toggleSilentMode}
           />
-          <Text style={styles.micInstructionTitle}>Tap to speak</Text>
-          <Text style={styles.micInstructionSubtitle}>
-            Hold cadence steady like Ravi Shastri
-          </Text>
-
-          <View style={styles.silentToggleContainer}>
-            <PublicSilentTogglePill
-              isSilentMode={isSilentMode}
-              onToggle={toggleSilentMode}
-            />
-          </View>
         </View>
-      ) : (
-        <View style={styles.keyboardContainer}>
-          <View style={styles.silentToggleContainer}>
-            <PublicSilentTogglePill
-              isSilentMode={isSilentMode}
-              onToggle={toggleSilentMode}
+
+        {!isSilentMode ? (
+          <View style={styles.micRow}>
+            <TerracottaMicButton
+              isListening={isRecording}
+              onPress={handleToggleMic}
             />
           </View>
+        ) : (
           <DevanagariKeyboard
             variant="bollywood"
-            ctaLabel="Submit"
-            onKeyPress={(ch) => setTypedPhrase((prev) => prev + ch)}
+            onKeyPress={(char) => setTypedPhrase((prev) => prev + char)}
             onBackspace={() => setTypedPhrase((prev) => prev.slice(0, -1))}
             onClear={() => setTypedPhrase('')}
-            onSubmit={handleSilentSubmit}
           />
-        </View>
-      )}
+        )}
+      </View>
     </SafeAreaView>
   );
 };
@@ -232,132 +285,116 @@ const styles = StyleSheet.create({
     paddingBottom: zenSpacing.md,
   },
   promptCard: {
-    backgroundColor: '#FAF5EE',
-    borderRadius: zenRadius.lg,
+    backgroundColor: zenColors.cardWhite,
+    borderRadius: zenRadius.md,
     borderWidth: 1,
-    borderColor: '#EFE7DC',
+    borderColor: zenColors.borderWarm,
     padding: zenSpacing.md,
-    marginVertical: zenSpacing.xs,
     alignItems: 'center',
+    marginBottom: zenSpacing.md,
   },
   badgeRow: {
-    marginBottom: 6,
+    flexDirection: 'row',
+    marginBottom: zenSpacing.sm,
   },
   thrillerBadge: {
-    backgroundColor: '#FDEEE0',
-    borderWidth: 1,
-    borderColor: '#F3DEC2',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: zenRadius.pill,
+    backgroundColor: '#FBEBEB',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: zenRadius.sm,
   },
   thrillerText: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 10,
-    fontWeight: '800',
-    color: zenColors.ochreAccent,
-    letterSpacing: 0.8,
+    color: '#D9534F',
+    letterSpacing: 0.5,
   },
   hindiPromptText: {
+    fontFamily: 'NotoSansDevanagari_700Bold',
     fontSize: 24,
-    fontWeight: '800',
+    lineHeight: 34,
     color: zenColors.espressoText,
     textAlign: 'center',
-    lineHeight: 32,
   },
   romanPromptText: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 13,
-    fontStyle: 'italic',
     color: zenColors.mutedBrown,
+    fontStyle: 'italic',
     textAlign: 'center',
     marginTop: 6,
-    marginBottom: 10,
+    marginBottom: zenSpacing.sm,
   },
   listenPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F7EFE6',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: zenRadius.pill,
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
-    gap: 6,
+    backgroundColor: zenColors.surfaceSand,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 4,
   },
   listenIcon: {
     fontSize: 14,
+    marginRight: 6,
   },
   listenText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 12,
-    fontWeight: '700',
     color: zenColors.terracotta,
   },
   successCard: {
     backgroundColor: zenColors.surfaceMint,
     borderRadius: zenRadius.md,
-    padding: zenSpacing.md,
     borderWidth: 1,
-    borderColor: zenColors.sageTeal,
-    marginVertical: zenSpacing.xs,
+    borderColor: zenColors.successGreen,
+    padding: zenSpacing.md,
     alignItems: 'center',
+    marginBottom: zenSpacing.md,
   },
   successCardTitle: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 14,
-    fontWeight: '800',
-    color: zenColors.sageTeal,
-    marginBottom: 8,
+    color: zenColors.successGreen,
+    marginBottom: zenSpacing.sm,
   },
   nextLevelButton: {
     backgroundColor: zenColors.sageTeal,
     paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: zenRadius.pill,
+    borderRadius: zenRadius.sm,
+    width: '100%',
+    alignItems: 'center',
   },
   nextLevelText: {
-    color: zenColors.cardWhite,
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 13,
-    fontWeight: '700',
+    color: zenColors.cardWhite,
   },
   silentInputWrapper: {
-    backgroundColor: zenColors.cardWhite,
-    borderRadius: zenRadius.md,
-    padding: zenSpacing.md,
-    marginVertical: zenSpacing.xs,
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
+    marginTop: zenSpacing.sm,
+    marginBottom: zenSpacing.md,
   },
   silentInputLabel: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 10,
-    fontWeight: '700',
-    color: zenColors.ochreAccent,
+    letterSpacing: 1,
+    color: zenColors.mutedBrown,
     marginBottom: 6,
-    letterSpacing: 0.8,
   },
   submitRow: {
-    marginTop: 8,
+    marginTop: zenSpacing.sm,
   },
-  bottomControls: {
+  footerContainer: {
+    paddingBottom: 4,
+  },
+  toggleRow: {
     alignItems: 'center',
-    paddingVertical: zenSpacing.sm,
-    paddingHorizontal: zenSpacing.md,
-    backgroundColor: zenColors.bgCream,
+    marginBottom: 6,
   },
-  micInstructionTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: zenColors.espressoText,
-    marginTop: 4,
-  },
-  micInstructionSubtitle: {
-    fontSize: 11,
-    color: zenColors.mutedBrown,
-    marginBottom: 8,
-  },
-  silentToggleContainer: {
-    marginTop: 4,
-    marginBottom: 4,
-  },
-  keyboardContainer: {
-    backgroundColor: zenColors.bgCream,
+  micRow: {
+    alignItems: 'center',
+    paddingVertical: 4,
   },
 });
 

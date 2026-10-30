@@ -1,55 +1,78 @@
 // src/components/dashboard/ArtifactsModal.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { zenColors, zenRadius, zenSpacing } from '@/theme/zenTheme';
 import { useFrontendStore } from '@/store/useFrontendStore';
+import { ApiClient } from '@/lib/api/client';
 
 export interface ArtifactsModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
+const DEFAULT_ARTIFACTS = [
+  {
+    id: 'vintage-mic',
+    name: 'Vintage Mic',
+    icon: '🎙️',
+    level: 'Level 1: Bollywood Studio',
+    description: 'Mastered spontaneous lyric enunciation without multiple-choice cues.',
+    bonus: '+20 XP Active Recall Boost',
+  },
+  {
+    id: 'cricket-ball',
+    name: 'Cricket Ball',
+    icon: '🏏',
+    level: 'Level 2: Cricket Commentary',
+    description: 'Spoke match-winning commentary with authentic Wankhede stadium cadence.',
+    bonus: '+35 XP Fluency Cadence',
+  },
+  {
+    id: 'chai-kulhad',
+    name: 'Chai Kulhad',
+    icon: '☕',
+    level: 'Level 3: Street Food Masterchef',
+    description: 'Negotiated authentic street food portions using zero English crutches.',
+    bonus: '+50 XP Negotiation Mastery',
+  },
+  {
+    id: 'golden-diya',
+    name: 'Golden Diya',
+    icon: '🪔',
+    level: 'Boss Level: Diwali Call with Nani',
+    description: 'Maintained 3-minute live conversational Hindi with natural respect markers.',
+    bonus: '+100 XP Cultural Fluency',
+  },
+];
+
 export const ArtifactsModal: React.FC<ArtifactsModalProps> = ({ visible, onClose }) => {
   const { unlockedArtifacts } = useFrontendStore();
+  const [artifacts, setArtifacts] = useState<any[]>(DEFAULT_ARTIFACTS);
 
-  const allArtifacts = [
-    {
-      id: 'vintage-mic',
-      name: 'Vintage Mic',
-      icon: '🎙️',
-      level: 'Level 1: Bollywood Studio',
-      description: 'Mastered spontaneous lyric enunciation without multiple-choice cues.',
-      unlocked: unlockedArtifacts.includes('vintage-mic'),
-      bonus: '+20 XP Active Recall Boost',
-    },
-    {
-      id: 'cricket-ball',
-      name: 'Cricket Ball',
-      icon: '🏏',
-      level: 'Level 2: Cricket Commentary',
-      description: 'Spoke match-winning commentary with authentic Wankhede stadium cadence.',
-      unlocked: unlockedArtifacts.includes('cricket-ball'),
-      bonus: '+35 XP Fluency Cadence',
-    },
-    {
-      id: 'chai-kulhad',
-      name: 'Chai Kulhad',
-      icon: '☕',
-      level: 'Level 3: Street Food Masterchef',
-      description: 'Negotiated authentic street food portions using zero English crutches.',
-      unlocked: unlockedArtifacts.includes('chai-kulhad'),
-      bonus: '+50 XP Negotiation Mastery',
-    },
-    {
-      id: 'golden-diya',
-      name: 'Golden Diya',
-      icon: '🪔',
-      level: 'Boss Level: Diwali Call with Nani',
-      description: 'Maintained 3-minute live conversational Hindi with natural respect markers.',
-      unlocked: unlockedArtifacts.includes('golden-diya'),
-      bonus: '+100 XP Cultural Fluency',
-    },
-  ];
+  // Fetch dynamic artifacts shelf from backend when modal opens
+  useEffect(() => {
+    if (visible) {
+      let isMounted = true;
+      (async () => {
+        try {
+          const data = await ApiClient.getArtifactsShelf();
+          if (data?.artifacts && isMounted) {
+            setArtifacts(data.artifacts);
+          }
+        } catch {
+          // Keep defaults
+        }
+      })();
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [visible]);
+
+  const allArtifacts = artifacts.map((item) => ({
+    ...item,
+    unlocked: item.unlocked !== undefined ? item.unlocked : unlockedArtifacts.includes(item.id),
+  }));
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
@@ -99,12 +122,16 @@ export const ArtifactsModal: React.FC<ArtifactsModalProps> = ({ visible, onClose
                         item.unlocked ? styles.badgeTagUnlocked : styles.badgeTagLocked,
                       ]}
                     >
-                      {item.unlocked ? 'Unlocked' : 'Locked'}
+                      {item.unlocked ? 'CLAIMED' : 'LOCKED'}
                     </Text>
                   </View>
-                  <Text style={styles.levelLabel}>{item.level}</Text>
-                  <Text style={styles.descriptionText}>{item.description}</Text>
-                  <Text style={styles.bonusText}>{item.bonus}</Text>
+
+                  <Text style={styles.artifactLevel}>{item.level}</Text>
+                  <Text style={styles.artifactDescription}>{item.description}</Text>
+
+                  <View style={styles.bonusBadge}>
+                    <Text style={styles.bonusText}>{item.bonus}</Text>
+                  </View>
                 </View>
               </View>
             ))}
@@ -123,12 +150,10 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: zenColors.cardWhite,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: zenSpacing.lg,
+    borderTopLeftRadius: zenRadius.lg,
+    borderTopRightRadius: zenRadius.lg,
+    padding: zenSpacing.md,
     maxHeight: '82%',
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -137,31 +162,33 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   modalOverline: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 10,
-    fontWeight: '800',
-    color: zenColors.ochreAccent,
-    letterSpacing: 1.1,
+    letterSpacing: 1.2,
+    color: zenColors.terracotta,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 18,
     color: zenColors.espressoText,
+    marginTop: 2,
   },
   closeButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: zenColors.surfaceSand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeButtonText: {
-    fontSize: 16,
+    fontSize: 14,
     color: zenColors.espressoText,
-    fontWeight: '700',
+    fontWeight: 'bold',
   },
   modalSubtitle: {
-    fontSize: 13,
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 12,
     color: zenColors.mutedBrown,
     marginBottom: zenSpacing.md,
   },
@@ -170,32 +197,29 @@ const styles = StyleSheet.create({
   },
   artifactCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    padding: zenSpacing.md,
     borderRadius: zenRadius.md,
+    padding: zenSpacing.md,
     marginBottom: zenSpacing.sm,
     borderWidth: 1,
   },
   artifactCardUnlocked: {
-    backgroundColor: '#FAF5EE',
-    borderColor: '#EFE7DC',
+    backgroundColor: zenColors.cardWhite,
+    borderColor: zenColors.borderWarm,
   },
   artifactCardLocked: {
-    backgroundColor: '#F7F3EE',
-    borderColor: '#EFE7DC',
+    backgroundColor: '#FAF7F2',
+    borderColor: '#ECE3D8',
     opacity: 0.65,
   },
   iconCircle: {
-    position: 'relative',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: zenColors.cardWhite,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: zenColors.surfaceSand,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: zenSpacing.md,
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
+    position: 'relative',
   },
   artifactIcon: {
     fontSize: 24,
@@ -204,24 +228,24 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: -2,
     right: -2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: zenColors.cardWhite,
   },
   statusDotCheck: {
-    backgroundColor: '#27AE60',
+    backgroundColor: zenColors.successGreen,
   },
   statusDotLock: {
-    backgroundColor: '#7A6455',
+    backgroundColor: zenColors.mutedBrown,
   },
   statusDotText: {
-    fontSize: 9,
     color: zenColors.cardWhite,
-    fontWeight: '800',
+    fontSize: 9,
+    fontWeight: 'bold',
   },
   artifactDetails: {
     flex: 1,
@@ -233,43 +257,50 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   artifactName: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 14,
-    fontWeight: '800',
     color: zenColors.espressoText,
   },
   badgeTag: {
-    fontSize: 10,
-    fontWeight: '800',
-    paddingHorizontal: 8,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 9,
+    paddingHorizontal: 6,
     paddingVertical: 2,
-    borderRadius: zenRadius.pill,
+    borderRadius: 8,
   },
   badgeTagUnlocked: {
     backgroundColor: zenColors.surfaceMint,
-    color: zenColors.sageTeal,
+    color: zenColors.successGreen,
   },
   badgeTagLocked: {
     backgroundColor: zenColors.surfaceSand,
     color: zenColors.mutedBrown,
   },
-  levelLabel: {
+  artifactLevel: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 11,
-    fontWeight: '700',
-    color: zenColors.ochreAccent,
-    marginBottom: 2,
-  },
-  descriptionText: {
-    fontSize: 12,
-    color: zenColors.mutedBrown,
-    lineHeight: 16,
+    color: zenColors.terracotta,
     marginBottom: 4,
   },
+  artifactDescription: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 12,
+    color: zenColors.espressoText,
+    lineHeight: 16,
+    marginBottom: 6,
+  },
+  bonusBadge: {
+    backgroundColor: zenColors.surfaceSand,
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: zenRadius.sm,
+  },
   bonusText: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 10,
     color: zenColors.sageTeal,
   },
 });
 
 export default ArtifactsModal;
-

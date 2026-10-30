@@ -1,5 +1,6 @@
 // src/store/useFrontendStore.ts
 import { create } from 'zustand';
+import { ApiClient } from '@/lib/api/client';
 
 export interface ChatMessage {
   id: string;
@@ -12,6 +13,53 @@ export interface ChatMessage {
   respectWord?: string;
 }
 
+export interface QuestLevelData {
+  id: string;
+  levelNumber: number;
+  slug: string;
+  title: string;
+  subtitle: string;
+  tagOverline: string;
+  icon: string;
+  route: string;
+  status: 'mastered' | 'active' | 'locked';
+  stars: number;
+  xpReward: number;
+  ctaLabel?: string;
+  isIndented?: boolean;
+}
+
+export interface QuestMapData {
+  hud: {
+    streakDays: number;
+    xpPoints: number;
+    currentLevel: string;
+    isGoldenDiyaUnlocked: boolean;
+  };
+  riverTrail: {
+    currentStage: number;
+    totalStages: number;
+    stages: Array<{
+      stageNumber: number;
+      name: string;
+      subtitle: string;
+      description: string;
+      isCompleted: boolean;
+    }>;
+  };
+  levels: QuestLevelData[];
+  milestoneChest: {
+    currentXp: number;
+    targetXp: number;
+    progressPercent: number;
+  };
+  heroCard: {
+    unlockedArtifactIds: string[];
+    dailyGoalTitle: string;
+    dailyGoalSubtitle: string;
+  };
+}
+
 export interface FrontendState {
   activeScreen: string;
   xp: number;
@@ -22,6 +70,8 @@ export interface FrontendState {
   isGoldenDiyaUnlocked: boolean;
   playbackSpeed: 1.0 | 0.8 | 0.75;
   isSilentMode: boolean;
+  questMapData: QuestMapData | null;
+  isLoading: boolean;
 
   setActiveScreen: (screen: string) => void;
   setXp: (xp: number) => void;
@@ -35,6 +85,12 @@ export interface FrontendState {
   setPlaybackSpeed: (speed: 1.0 | 0.8 | 0.75) => void;
   toggleSilentMode: () => void;
   setSilentMode: (val: boolean) => void;
+
+  // Dynamic Backend Sync Actions
+  fetchQuestMap: () => Promise<void>;
+  fetchChatHistory: () => Promise<void>;
+  fetchUserProfile: () => Promise<void>;
+  syncWithBackend: () => Promise<void>;
 }
 
 export const INITIAL_CHAT_HISTORY: ChatMessage[] = [
@@ -66,7 +122,7 @@ export const INITIAL_CHAT_HISTORY: ChatMessage[] = [
   },
 ];
 
-export const useFrontendStore = create<FrontendState>((set) => ({
+export const useFrontendStore = create<FrontendState>((set, get) => ({
   activeScreen: 'SplashLoadingScreen',
   xp: 480,
   streak: 7,
@@ -76,6 +132,8 @@ export const useFrontendStore = create<FrontendState>((set) => ({
   isGoldenDiyaUnlocked: true,
   playbackSpeed: 1.0,
   isSilentMode: false,
+  questMapData: null,
+  isLoading: false,
 
   setActiveScreen: (activeScreen) => set({ activeScreen }),
   setXp: (xp) => set({ xp }),
@@ -102,4 +160,70 @@ export const useFrontendStore = create<FrontendState>((set) => ({
   setPlaybackSpeed: (playbackSpeed) => set({ playbackSpeed }),
   toggleSilentMode: () => set((state) => ({ isSilentMode: !state.isSilentMode })),
   setSilentMode: (isSilentMode) => set({ isSilentMode }),
+
+  // Fetch full dynamic Quest Map from backend
+  fetchQuestMap: async () => {
+    try {
+      const data = await ApiClient.getQuestMap();
+      if (data) {
+        set({
+          questMapData: data,
+          xp: data.hud?.xpPoints ?? get().xp,
+          streak: data.hud?.streakDays ?? get().streak,
+          isGoldenDiyaUnlocked: data.hud?.isGoldenDiyaUnlocked ?? get().isGoldenDiyaUnlocked,
+          unlockedArtifacts: data.heroCard?.unlockedArtifactIds ?? get().unlockedArtifacts,
+          completedLevels: data.levels
+            ?.filter((l: QuestLevelData) => l.status === 'mastered')
+            .map((l: QuestLevelData) => l.id) ?? get().completedLevels,
+        });
+      }
+    } catch {
+      // Keep existing store state on network failure
+    }
+  },
+
+  // Fetch dynamic Nani WhatsApp Chat History from backend
+  fetchChatHistory: async () => {
+    try {
+      const data = await ApiClient.getNaniChatHistory();
+      if (data?.messages && data.messages.length > 0) {
+        set({ chatHistory: data.messages });
+      }
+    } catch {
+      // Keep initial chat history
+    }
+  },
+
+  // Fetch user profile stats from backend
+  fetchUserProfile: async () => {
+    try {
+      const data = await ApiClient.getUserProfile();
+      if (data) {
+        set({
+          xp: data.profile?.xp ?? get().xp,
+          streak: data.profile?.streak ?? get().streak,
+          isSilentMode: data.preferences?.isSilentMode ?? get().isSilentMode,
+          playbackSpeed: data.preferences?.playbackSpeed ?? get().playbackSpeed,
+          completedLevels: data.completedLevels ?? get().completedLevels,
+          unlockedArtifacts: data.unlockedArtifacts ?? get().unlockedArtifacts,
+          isGoldenDiyaUnlocked: data.profile?.isGoldenDiyaUnlocked ?? get().isGoldenDiyaUnlocked,
+        });
+      }
+    } catch {
+      // Keep existing store state
+    }
+  },
+
+  syncWithBackend: async () => {
+    set({ isLoading: true });
+    try {
+      await Promise.allSettled([
+        get().fetchQuestMap(),
+        get().fetchUserProfile(),
+        get().fetchChatHistory(),
+      ]);
+    } finally {
+      set({ isLoading: false });
+    }
+  },
 }));

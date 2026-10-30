@@ -1,22 +1,28 @@
 // src/screens/SplashLoadingScreen.tsx
-import React, { useEffect, useState } from 'react';
+import { SoundwaveBars } from "@/components/menu/BrandLogoBadge";
+import { useFrontendStore } from "@/store/useFrontendStore";
+import { zenColors, zenRadius, zenSpacing } from "@/theme/zenTheme";
+import { useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   ActivityIndicator,
   Animated,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { zenColors, zenRadius, zenSpacing } from '@/theme/zenTheme';
-import { SoundwaveBars } from '@/components/menu/BrandLogoBadge';
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export const SplashLoadingScreen: React.FC = () => {
   const router = useRouter();
+  const { syncWithBackend } = useFrontendStore();
   const [progress, setProgress] = useState(15);
   const progressAnim = React.useRef(new Animated.Value(15)).current;
+
+  useEffect(() => {
+    syncWithBackend();
+  }, [syncWithBackend]);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -41,14 +47,14 @@ export const SplashLoadingScreen: React.FC = () => {
   useEffect(() => {
     if (progress >= 100) {
       const timeout = setTimeout(() => {
-        router.replace('/quest-map');
+        router.replace("/quest-map");
       }, 450);
       return () => clearTimeout(timeout);
     }
   }, [progress, router]);
 
   const handleStartNow = () => {
-    router.replace('/quest-map');
+    router.replace("/quest-map");
   };
 
   return (
@@ -80,7 +86,9 @@ export const SplashLoadingScreen: React.FC = () => {
             <Text style={styles.englishTitle}>Bhasha Setu</Text>
           </Text>
           <Text style={styles.subtitle}>The Language Bridge</Text>
-          <Text style={styles.tagline}>Connecting Script to Spontaneous Speech</Text>
+          <Text style={styles.tagline}>
+            Connecting Script to Spontaneous Speech
+          </Text>
         </View>
 
         {/* Center Animated Large Soundwave */}
@@ -106,7 +114,7 @@ export const SplashLoadingScreen: React.FC = () => {
                 {
                   width: progressAnim.interpolate({
                     inputRange: [0, 100],
-                    outputRange: ['0%', '100%'],
+                    outputRange: ["0%", "100%"],
                   }),
                 },
               ]}
@@ -120,7 +128,7 @@ export const SplashLoadingScreen: React.FC = () => {
             activeOpacity={0.8}
           >
             <Text style={styles.startNowText}>
-              {progress >= 100 ? 'Enter Quest Map →' : 'Skip loading →'}
+              {progress >= 100 ? "Enter Quest Map →" : "Skip loading →"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -136,8 +144,8 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: zenSpacing.lg,
     paddingBottom: zenSpacing.lg,
   },
@@ -150,9 +158,9 @@ const styles = StyleSheet.create({
     borderRadius: 95,
     backgroundColor: zenColors.cardWhite,
     borderWidth: 5,
-    borderColor: '#F1E6D8',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: "#F1E6D8",
+    alignItems: "center",
+    justifyContent: "center",
     shadowColor: zenColors.espressoText,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,
@@ -161,14 +169,14 @@ const styles = StyleSheet.create({
     padding: zenSpacing.md,
   },
   logoMarkRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     marginBottom: 6,
   },
   devanagariA: {
     fontSize: 52,
-    fontWeight: '800',
+    fontWeight: "800",
     color: zenColors.ochreAccent,
   },
   archBridge: {
@@ -181,7 +189,7 @@ const styles = StyleSheet.create({
   },
   latinA: {
     fontSize: 52,
-    fontWeight: '800',
+    fontWeight: "800",
     color: zenColors.sageTeal,
   },
   soundwaveInCircle: {
@@ -189,19 +197,19 @@ const styles = StyleSheet.create({
   },
   bridgeSubtext: {
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
     color: zenColors.espressoText,
     letterSpacing: 1.5,
     marginTop: 4,
   },
   titleContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginVertical: zenSpacing.md,
   },
   mainTitle: {
     fontSize: 26,
-    fontWeight: '800',
-    textAlign: 'center',
+    fontWeight: "800",
+    textAlign: "center",
     marginBottom: 4,
   },
   hindiTitle: {
@@ -215,23 +223,23 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
     color: zenColors.sageTeal,
     marginBottom: 4,
   },
   tagline: {
     fontSize: 13,
     color: zenColors.mutedBrown,
-    textAlign: 'center',
-    fontWeight: '500',
+    textAlign: "center",
+    fontWeight: "500",
   },
   largeSoundwaveContainer: {
     marginVertical: zenSpacing.sm,
     paddingVertical: zenSpacing.sm,
   },
   bottomCard: {
-    width: '100%',
-    backgroundColor: '#F3ECE2',
+    width: "100%",
+    backgroundColor: "#F3ECE2",
     borderRadius: zenRadius.lg,
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
@@ -243,47 +251,47 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   loadingStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: zenSpacing.sm,
   },
   statusLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   statusLabel: {
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: "700",
     color: zenColors.espressoText,
   },
   percentageText: {
     fontSize: 14,
-    fontWeight: '800',
+    fontWeight: "800",
     color: zenColors.ochreAccent,
   },
   progressTrack: {
     height: 8,
     backgroundColor: zenColors.cardWhite,
     borderRadius: zenRadius.pill,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
     marginBottom: zenSpacing.sm,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: zenColors.sageTeal,
     borderRadius: zenRadius.pill,
   },
   startNowButton: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 6,
   },
   startNowText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: zenColors.mutedBrown,
   },
 });

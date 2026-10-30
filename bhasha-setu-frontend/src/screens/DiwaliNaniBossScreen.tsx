@@ -1,5 +1,5 @@
 // src/screens/DiwaliNaniBossScreen.tsx
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,7 +7,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -18,78 +17,151 @@ import { BrandLogoBadge } from '@/components/menu/BrandLogoBadge';
 import { WhatsAppVoiceBubble } from '@/components/chat/WhatsAppVoiceBubble';
 import { GoldenDiyaLootCard } from '@/components/chat/GoldenDiyaLootCard';
 import { TerracottaMicButton } from '@/components/buttons/TerracottaMicButton';
+import { ApiClient } from '@/lib/api/client';
+import { userSocketService } from '@/lib/websockets/user_services';
 import { triggerKeycapHaptic, triggerSuccessHaptic } from '@/lib/services/hapticsService';
 
 export const DiwaliNaniBossScreen: React.FC = () => {
   const router = useRouter();
-  const { chatHistory, addChatMessage, addXp, unlockArtifact, completeLevel } = useFrontendStore();
+  const {
+    chatHistory,
+    addChatMessage,
+    addXp,
+    unlockArtifact,
+    completeLevel,
+    fetchChatHistory,
+  } = useFrontendStore();
 
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const scrollViewRef = useRef<any>(null);
-  const lootCardRef = useRef<any>(null);
 
-  const handleSendText = () => {
+  // Sync WhatsApp dialogue history from backend on mount
+  useEffect(() => {
+    fetchChatHistory();
+  }, [fetchChatHistory]);
+
+  const handleSendText = async () => {
     if (!inputText.trim()) return;
 
+    const userText = inputText.trim();
+    setInputText('');
     triggerKeycapHaptic();
-    addChatMessage({
-      id: `user-msg-${Date.now()}`,
-      sender: 'user',
-      duration: '0:03',
-      hindiText: `“${inputText.trim()}”`,
-      englishSubtext: '“User spoken/typed response”',
-      fluencyScore: 94,
-      respectWord: 'आप',
-      timestamp: '10:16 AM',
+
+    const timestamp = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
     });
 
-    setInputText('');
+    const userMsgId = `user-msg-${Date.now()}`;
+    addChatMessage({
+      id: userMsgId,
+      sender: 'user',
+      duration: '0:03',
+      hindiText: `“${userText}”`,
+      englishSubtext: '“User typed response”',
+      fluencyScore: 94,
+      respectWord: userText.includes('आप') ? 'आप' : undefined,
+      timestamp,
+    });
+
     addXp(25);
 
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 150);
 
-    // Nani AI response
-    setTimeout(() => {
-      addChatMessage({
-        id: `nani-reply-${Date.now()}`,
-        sender: 'nani',
-        duration: '0:04',
-        hindiText: '“जीते रहो बेटा! तुम्हारा इंतज़ार रहेगा। खूब खुश रहो! 🪔”',
-        englishSubtext: '“Live long son! I will be waiting for you. Stay blessed!”',
-        timestamp: '10:16 AM',
-      });
-      triggerSuccessHaptic();
-      unlockArtifact('golden-diya');
-      completeLevel('LEVEL_4');
+    // Call backend API / WebSocket to evaluate cultural etiquette and get Nani's reply
+    try {
+      const evalResult = await ApiClient.evaluateVoiceTurn(userText, 'NANI_BOSS');
+      const hasRespect = evalResult?.respectMarkersFound && evalResult.respectMarkersFound.length > 0;
+
+      const replyHindi = hasRespect
+        ? '“जीते रहो बेटा! तुम्हारा इंतज़ार रहेगा। खूब खुश रहो! 🪔”'
+        : '“बेटा, बड़ों से ‘आप’ कहकर बात करते हैं। लेकिन तुम खूब खुश रहो!”';
+
+      const replyEnglish = hasRespect
+        ? '“Live long son! I will be waiting for you. Stay blessed!”'
+        : '“Son, we speak using ‘Aap’ to elders. But stay blessed!”';
+
       setTimeout(() => {
-        scrollViewRef.current?.scrollToEnd({ animated: true });
-      }, 150);
-    }, 1200);
+        addChatMessage({
+          id: `nani-reply-${Date.now()}`,
+          sender: 'nani',
+          duration: '0:04',
+          hindiText: replyHindi,
+          englishSubtext: replyEnglish,
+          timestamp,
+        });
+
+        triggerSuccessHaptic();
+
+        if (evalResult?.unlockGoldenDiya || hasRespect) {
+          unlockArtifact('golden-diya');
+          completeLevel('LEVEL_4');
+          ApiClient.completeQuestLevel('LEVEL_4', 3, 100);
+        }
+
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 150);
+      }, 1000);
+    } catch {
+      // Fallback response if offline
+      setTimeout(() => {
+        addChatMessage({
+          id: `nani-reply-${Date.now()}`,
+          sender: 'nani',
+          duration: '0:04',
+          hindiText: '“जीते रहो बेटा! तुम्हारा इंतज़ार रहेगा। खूब खुश रहो! 🪔”',
+          englishSubtext: '“Live long son! I will be waiting for you. Stay blessed!”',
+          timestamp,
+        });
+        triggerSuccessHaptic();
+        unlockArtifact('golden-diya');
+        completeLevel('LEVEL_4');
+      }, 1000);
+    }
   };
 
   const handleMicPress = () => {
     if (!isRecording) {
       setIsRecording(true);
       triggerKeycapHaptic();
-      setTimeout(() => {
+      userSocketService.emitUserMicChunk('mock_nani_audio_chunk', 88);
+
+      setTimeout(async () => {
         setIsRecording(false);
         triggerSuccessHaptic();
+
+        const timestamp = new Date().toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+
+        const spokenHindi = '“हाँ नानी, मैं समय पर आ जाऊँगा, आप चिंता मत कीजिए।”';
+        const spokenEnglish = '“Yes Nani, I will arrive on time, please do not worry.”';
+
+        // Evaluate spoken turn on backend
+        const evalResult = await ApiClient.evaluateVoiceTurn(spokenHindi, 'NANI_BOSS', 88, 220);
+
         addChatMessage({
           id: `user-voice-${Date.now()}`,
           sender: 'user',
           duration: '0:04',
-          hindiText: '“हाँ नानी, मैं समय पर आ जाऊँगा, आप चिंता मत कीजिए।”',
-          englishSubtext: '“Yes Nani, I will arrive on time, please do not worry.”',
-          fluencyScore: 98,
+          hindiText: spokenHindi,
+          englishSubtext: spokenEnglish,
+          fluencyScore: evalResult?.fluencyScore || 98,
           respectWord: 'आप',
-          timestamp: '10:16 AM',
+          timestamp,
         });
-        addXp(100);
+
+        const awardedXp = evalResult?.xpAwarded || 100;
+        addXp(awardedXp);
         unlockArtifact('golden-diya');
         completeLevel('LEVEL_4');
+        await ApiClient.completeQuestLevel('LEVEL_4', 3, 100);
+
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 150);
@@ -102,102 +174,80 @@ export const DiwaliNaniBossScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <TopScreenBar
-        title="Boss Level: Diwali Call With Nani"
+        title="Diwali Nani Boss"
+        showBack={true}
         onBack={() => router.replace('/quest-map')}
       />
 
-      {/* Nani Contact Card Header */}
-      <View style={styles.contactCard}>
-        <View style={styles.avatarWrapper}>
-          <Image
-            source={require('@/assets/images/nani-avatar.png')}
-            style={styles.naniAvatar}
-            defaultSource={require('@/assets/images/logo-circle-badge.png')}
-          />
-          <View style={styles.onlineDot} />
-        </View>
-
-        <View style={styles.contactInfo}>
-          <View style={styles.contactTitleRow}>
-            <Text style={styles.naniName}>नानी (Nani)</Text>
-            <View style={styles.liveBadge}>
-              <Text style={styles.liveBadgeDot}>●</Text>
-              <Text style={styles.liveBadgeText}>Live</Text>
-            </View>
-          </View>
-          <Text style={styles.poweredByText}>Powered by Bolna Voice AI</Text>
-        </View>
-
-        <BrandLogoBadge size={38} />
-      </View>
-
-      {/* Sub-Banner */}
-      <View style={styles.subBanner}>
-        <Text style={styles.subBannerText}>
-          🏠 Boss Level: Diwali Phone Call with Nani
-        </Text>
-        <View style={styles.starsRow}>
-          <Text style={styles.goldStar}>★</Text>
-          <Text style={styles.goldStar}>★</Text>
-          <Text style={styles.goldStar}>★</Text>
-        </View>
-      </View>
-
-      {/* WhatsApp Voice Chat Canvas */}
       <ScrollView
         ref={scrollViewRef}
-        style={styles.chatScrollView}
-        contentContainerStyle={styles.chatContent}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {chatHistory.map((item) => (
+        {/* Authentic WhatsApp Contact Header */}
+        <View style={styles.naniHeaderCard}>
+          <BrandLogoBadge size={38} />
+          <View style={styles.naniTextColumn}>
+            <Text style={styles.naniName}>Nani (दादी/नानी)</Text>
+            <Text style={styles.naniStatus}>Online • WhatsApp Voice Call</Text>
+          </View>
+        </View>
+
+        {/* Encrypted Notice Banner */}
+        <View style={styles.securityNotice}>
+          <Text style={styles.securityNoticeText}>
+            🔒 Messages and calls are simulated with real-time Indian cultural respect tone analysis.
+          </Text>
+        </View>
+
+        {/* Dynamic WhatsApp Voice Dialogue Messages */}
+        {chatHistory.map((msg) => (
           <WhatsAppVoiceBubble
-            key={item.id}
-            sender={item.sender}
-            duration={item.duration}
-            hindiText={item.hindiText}
-            englishSubtext={item.englishSubtext}
-            fluencyScore={item.fluencyScore}
-            respectWord={item.respectWord}
-            timestamp={item.timestamp}
+            key={msg.id}
+            sender={msg.sender}
+            duration={msg.duration}
+            hindiText={msg.hindiText}
+            englishSubtext={msg.englishSubtext}
+            fluencyScore={msg.fluencyScore}
+            respectWord={msg.respectWord}
+            timestamp={msg.timestamp}
           />
         ))}
 
-        {/* Golden Diya Loot Milestone Card */}
+        {/* Golden Diya Loot Card (Unlocked upon completing conversation) */}
         <GoldenDiyaLootCard
-          containerRef={lootCardRef}
           culturalXp={100}
-          onNextQuest={() => router.push('/quest-map')}
+          onShareMilestone={() => {}}
         />
       </ScrollView>
 
-      {/* Bottom WhatsApp Chat Input Bar */}
-      <View style={styles.bottomBar}>
-        <View style={styles.inputPill}>
-          <Text style={styles.inputEmoji}>😊</Text>
-          <TextInput
-            style={styles.textInput}
-            placeholder="Type or hold mic to speak Hindi..."
-            placeholderTextColor={zenColors.mutedBrown}
-            value={inputText}
-            onChangeText={setInputText}
-            onSubmitEditing={handleSendText}
-            returnKeyType="send"
-          />
-          {inputText.trim().length > 0 ? (
-            <TouchableOpacity onPress={handleSendText} style={styles.sendIconBtn}>
-              <Text style={styles.sendIcon}>➤</Text>
-            </TouchableOpacity>
-          ) : (
-            <Text style={styles.attachIcon}>📎</Text>
-          )}
-        </View>
-
-        <TerracottaMicButton
-          size={48}
-          isListening={isRecording}
-          onPress={handleMicPress}
+      {/* Docked WhatsApp Input Bar with Voice CTA */}
+      <View style={styles.inputBar}>
+        <TextInput
+          style={styles.textInput}
+          placeholder="Type message in Hindi..."
+          placeholderTextColor={zenColors.mutedBrown}
+          value={inputText}
+          onChangeText={setInputText}
+          onSubmitEditing={handleSendText}
+          returnKeyType="send"
         />
+
+        <TouchableOpacity
+          style={styles.sendButton}
+          onPress={handleSendText}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.sendButtonText}>➤</Text>
+        </TouchableOpacity>
+
+        <View style={styles.micWrapper}>
+          <TerracottaMicButton
+            isListening={isRecording}
+            onPress={handleMicPress}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -208,152 +258,88 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: zenColors.bgCream,
   },
-  contactCard: {
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: zenSpacing.md,
+    paddingTop: zenSpacing.xs,
+    paddingBottom: zenSpacing.md,
+  },
+  naniHeaderCard: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: zenColors.cardWhite,
-    marginHorizontal: zenSpacing.md,
-    marginVertical: 4,
-    paddingHorizontal: zenSpacing.md,
-    paddingVertical: 10,
     borderRadius: zenRadius.md,
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
-    shadowColor: zenColors.espressoText,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    padding: zenSpacing.sm,
+    marginBottom: zenSpacing.xs,
   },
-  avatarWrapper: {
-    position: 'relative',
-    marginRight: zenSpacing.sm,
-  },
-  naniAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFEAD4',
-  },
-  onlineDot: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: zenColors.successGreen,
-    borderWidth: 2,
-    borderColor: zenColors.cardWhite,
-  },
-  contactInfo: {
-    flex: 1,
-  },
-  contactTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  naniTextColumn: {
+    marginLeft: zenSpacing.sm,
   },
   naniName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 14,
     color: zenColors.espressoText,
   },
-  liveBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E7F7ED',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: zenRadius.pill,
-    gap: 3,
-  },
-  liveBadgeDot: {
-    fontSize: 8,
+  naniStatus: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 11,
     color: zenColors.successGreen,
+    marginTop: 1,
   },
-  liveBadgeText: {
+  securityNotice: {
+    backgroundColor: '#F5EBE1',
+    borderRadius: zenRadius.sm,
+    padding: 8,
+    marginVertical: zenSpacing.xs,
+    alignItems: 'center',
+  },
+  securityNoticeText: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 10,
-    fontWeight: '800',
-    color: zenColors.successGreen,
-  },
-  poweredByText: {
-    fontSize: 11,
     color: zenColors.mutedBrown,
-    marginTop: 2,
+    textAlign: 'center',
   },
-  subBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: zenSpacing.lg,
-    paddingVertical: 6,
-    backgroundColor: zenColors.surfaceSand,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: zenColors.borderWarm,
-  },
-  subBannerText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: zenColors.espressoText,
-  },
-  starsRow: {
-    flexDirection: 'row',
-    gap: 2,
-  },
-  goldStar: {
-    fontSize: 12,
-    color: zenColors.goldStar,
-  },
-  chatScrollView: {
-    flex: 1,
-  },
-  chatContent: {
-    paddingHorizontal: zenSpacing.md,
-    paddingTop: zenSpacing.sm,
-    paddingBottom: zenSpacing.md,
-  },
-  bottomBar: {
+  inputBar: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: zenSpacing.md,
     paddingVertical: 8,
-    backgroundColor: zenColors.bgCream,
-    gap: zenSpacing.sm,
-  },
-  inputPill: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: zenColors.cardWhite,
-    borderRadius: zenRadius.pill,
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 8,
-  },
-  inputEmoji: {
-    fontSize: 16,
+    borderTopWidth: 1,
+    borderTopColor: zenColors.borderWarm,
   },
   textInput: {
     flex: 1,
-    fontSize: 13,
+    backgroundColor: zenColors.surfaceInput,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    fontFamily: 'NotoSansDevanagari_500Medium',
+    fontSize: 14,
     color: zenColors.espressoText,
-    padding: 0,
+    borderWidth: 1,
+    borderColor: zenColors.borderWarm,
   },
-  attachIcon: {
-    fontSize: 15,
-    color: zenColors.mutedBrown,
+  sendButton: {
+    backgroundColor: zenColors.sageTeal,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8,
   },
-  sendIconBtn: {
-    paddingHorizontal: 4,
+  sendButtonText: {
+    color: zenColors.cardWhite,
+    fontSize: 14,
+    fontWeight: 'bold',
   },
-  sendIcon: {
-    fontSize: 15,
-    color: zenColors.sageTeal,
-    fontWeight: '700',
+  micWrapper: {
+    marginLeft: 8,
   },
 });
 

@@ -1,10 +1,10 @@
 // src/screens/QuestMapScreen.tsx
-import React, { useState } from 'react';
-import { StyleSheet, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, ScrollView, ActivityIndicator, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { zenColors, zenSpacing } from '@/theme/zenTheme';
-import { useFrontendStore } from '@/store/useFrontendStore';
+import { useFrontendStore, QuestLevelData } from '@/store/useFrontendStore';
 import { TopScreenBar } from '@/components/menu/TopScreenBar';
 import { SubHeaderHUD } from '@/components/menu/SubHeaderHUD';
 import { BottomTabBar, BottomTabType } from '@/components/menu/BottomTabBar';
@@ -15,12 +15,87 @@ import { MilestoneChestBar } from '@/components/dashboard/MilestoneChestBar';
 import { ArtifactsModal } from '@/components/dashboard/ArtifactsModal';
 import { ProfileModal } from '@/components/dashboard/ProfileModal';
 
+// Static fallback nodes in case device is completely offline on first launch
+const FALLBACK_LEVELS: QuestLevelData[] = [
+  {
+    id: 'LEVEL_1',
+    levelNumber: 1,
+    slug: 'bollywood-studio',
+    title: 'Zen Bollywood Studio',
+    subtitle: 'Dialogue & Spontaneous Enunciation',
+    tagOverline: 'LEVEL 1 - MASTERED',
+    icon: '🎬',
+    route: '/bollywood-studio',
+    status: 'mastered',
+    stars: 3,
+    xpReward: 20,
+    isIndented: false,
+  },
+  {
+    id: 'LEVEL_2',
+    levelNumber: 2,
+    slug: 'cricket-commentary',
+    title: 'Zen Cricket Commentary',
+    subtitle: 'Fast-Action Sentence Framing',
+    tagOverline: 'LEVEL 2 - MASTERED',
+    icon: '🏏',
+    route: '/cricket-commentary',
+    status: 'mastered',
+    stars: 3,
+    xpReward: 35,
+    isIndented: true,
+  },
+  {
+    id: 'LEVEL_3',
+    levelNumber: 3,
+    slug: 'street-food',
+    title: 'Level 3: Street Food Masterchef',
+    subtitle: 'Order authentic chaat and negotiate portions using zero English crutches.',
+    tagOverline: 'ACTIVE QUEST - NOW PLAYING',
+    icon: '🍲',
+    route: '/street-food',
+    status: 'active',
+    stars: 0,
+    xpReward: 50,
+    ctaLabel: 'Play Quest • +50 XP →',
+    isIndented: false,
+  },
+  {
+    id: 'LEVEL_4',
+    levelNumber: 4,
+    slug: 'diwali-nani-boss',
+    title: 'Diwali WhatsApp Call with Nani',
+    subtitle: 'Master 3-Minute Live Dialogue Flow',
+    tagOverline: 'BOSS QUEST - FINAL BRIDGE',
+    icon: '🪔',
+    route: '/diwali-nani-boss',
+    status: 'locked',
+    stars: 0,
+    xpReward: 100,
+    ctaLabel: 'Challenge Boss • +100 XP →',
+    isIndented: true,
+  },
+];
+
 export const QuestMapScreen: React.FC = () => {
   const router = useRouter();
-  const { xp, streak, unlockedArtifacts } = useFrontendStore();
+  const {
+    xp,
+    streak,
+    unlockedArtifacts,
+    questMapData,
+    fetchQuestMap,
+    isLoading,
+  } = useFrontendStore();
+
   const [activeTab, setActiveTab] = useState<BottomTabType>('quest');
   const [showArtifactsModal, setShowArtifactsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  // Sync dynamic quest map from backend on mount
+  useEffect(() => {
+    fetchQuestMap();
+  }, [fetchQuestMap]);
 
   const handleTabPress = (tab: BottomTabType) => {
     setActiveTab(tab);
@@ -30,6 +105,15 @@ export const QuestMapScreen: React.FC = () => {
       setShowProfileModal(true);
     }
   };
+
+  const levels: QuestLevelData[] = questMapData?.levels?.length
+    ? questMapData.levels
+    : FALLBACK_LEVELS;
+
+  const currentStage = questMapData?.riverTrail?.currentStage ?? 3;
+  const totalStages = questMapData?.riverTrail?.totalStages ?? 4;
+  const chestTargetXp = questMapData?.milestoneChest?.targetXp ?? 500;
+  const currentChestXp = questMapData?.milestoneChest?.currentXp ?? xp;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -51,64 +135,35 @@ export const QuestMapScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 100% Active Recall Hero Card with Artifact Shelf */}
+        {/* Dynamic 100% Active Recall Hero Card with Artifact Shelf */}
         <ActiveRecallHeroCard unlockedArtifactIds={unlockedArtifacts} />
 
-        {/* River Crossing Path Trail Header */}
-        <RiverCrossingTrail currentStage={3} totalStages={4} />
-
-        {/* Quest Level Nodes */}
-        {/* Level 1: Mastered */}
-        <QuestNodeCard
-          levelNumber={1}
-          status="mastered"
-          tagOverline="LEVEL 1 - MASTERED"
-          stars={3}
-          icon="🎬"
-          title="Zen Bollywood Studio"
-          subtitle="Dialogue & Spontaneous Enunciation"
-          onPress={() => router.push('/bollywood-studio')}
+        {/* Dynamic River Crossing Path Trail */}
+        <RiverCrossingTrail
+          currentStage={currentStage}
+          totalStages={totalStages}
         />
 
-        {/* Level 2: Mastered (Indented Right) */}
-        <QuestNodeCard
-          levelNumber={2}
-          status="mastered"
-          tagOverline="LEVEL 2 - MASTERED"
-          stars={3}
-          icon="🏏"
-          title="Zen Cricket Commentary"
-          subtitle="Fast-Action Sentence Framing"
-          isIndented={true}
-          onPress={() => router.push('/cricket-commentary')}
-        />
+        {/* Dynamic Quest Level Nodes from Backend */}
+        {levels.map((lvl) => (
+          <QuestNodeCard
+            key={lvl.id || lvl.levelNumber}
+            levelNumber={lvl.levelNumber}
+            status={lvl.status}
+            tagOverline={lvl.tagOverline}
+            stars={lvl.stars}
+            icon={lvl.icon}
+            title={lvl.title}
+            subtitle={lvl.subtitle}
+            ctaLabel={lvl.ctaLabel}
+            xpReward={lvl.xpReward}
+            isIndented={lvl.isIndented}
+            onPress={() => router.push(lvl.route as any)}
+          />
+        ))}
 
-        {/* Level 3: Active Quest (Highlighted Teal Border) */}
-        <QuestNodeCard
-          levelNumber={3}
-          status="active"
-          tagOverline="ACTIVE QUEST - NOW PLAYING"
-          xpReward={50}
-          icon="🍲"
-          title="Level 3: Street Food Masterchef"
-          subtitle="Order authentic chaat and negotiate portions using zero English crutches."
-          ctaLabel="Play Quest • +50 XP →"
-          onPress={() => router.push('/street-food')}
-        />
-
-        {/* Boss Quest: Diwali WhatsApp Call with Nani */}
-        <QuestNodeCard
-          levelNumber={4}
-          status="locked"
-          tagOverline="BOSS QUEST - FINAL BRIDGE"
-          icon="🔒"
-          title="Diwali WhatsApp Call with Nani"
-          subtitle="Master 3-Minute Live Dialogue Flow"
-          onPress={() => router.push('/diwali-nani-boss')}
-        />
-
-        {/* Milestone Chest Bar */}
-        <MilestoneChestBar currentXp={xp} targetXp={500} />
+        {/* Dynamic Milestone Chest Bar */}
+        <MilestoneChestBar currentXp={currentChestXp} targetXp={chestTargetXp} />
       </ScrollView>
 
       {/* Docked Bottom Tab Bar */}

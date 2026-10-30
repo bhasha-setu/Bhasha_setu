@@ -1,5 +1,5 @@
 // src/screens/StreetFoodMasterchefScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -27,13 +27,70 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
   const [typedWord, setTypedWord] = useState('');
   const [speed, setSpeed] = useState<1.0 | 0.8 | 0.75>(0.8);
   const [isPlayingCustomerAudio, setIsPlayingCustomerAudio] = useState(false);
+
+  // Dynamic Drill Configuration from Backend
+  const [drillData, setDrillData] = useState<{
+    expectedWord: string;
+    stallName: string;
+    locationOverline: string;
+    promptLine1: string;
+    promptLine2Post: string;
+    promptLine3: string;
+    translation: string;
+    audioClipId: string;
+    xpAward: number;
+    categoryOverline: string;
+  }>({
+    expectedWord: 'तीखा',
+    stallName: 'Pani Puri Cart • Old Delhi',
+    locationOverline: 'CUSTOMER AT COUNTER',
+    promptLine1: 'भैया, पानी पूरी थोड़ा',
+    promptLine2Post: 'और कम मीठा',
+    promptLine3: 'बनाना।',
+    translation: '"Make the Pani Puri a little [spicy] and less sweet."',
+    audioClipId: 'pani-puri-order',
+    xpAward: 50,
+    categoryOverline: 'Street Food Kitchen • Order 3 of 5',
+  });
+
   const [evaluationState, setEvaluationState] = useState<{
     submitted: boolean;
     isCorrect: boolean;
     message: string;
   } | null>(null);
 
-  const EXPECTED_WORD = 'तीखा';
+  // Fetch dynamic drill configuration on mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const drill = await ApiClient.getDrill('STREET_FOOD');
+        if (drill && isMounted) {
+          const meta = drill.metadata || {};
+          setDrillData({
+            expectedWord: drill.targetWord || 'तीखा',
+            stallName: meta.stallName || 'Pani Puri Cart • Old Delhi',
+            locationOverline: 'CUSTOMER AT COUNTER',
+            promptLine1: 'भैया, पानी पूरी थोड़ा',
+            promptLine2Post: 'और कम मीठा',
+            promptLine3: 'बनाना।',
+            translation: drill.englishTranslation || '"Make the Pani Puri a little [spicy] and less sweet."',
+            audioClipId: drill.audioClipId || 'pani-puri-order',
+            xpAward: drill.xpAward || 50,
+            categoryOverline: drill.categoryOverline || 'Street Food Kitchen • Order 3 of 5',
+          });
+          if (drill.defaultSpeed) {
+            setSpeed(drill.defaultSpeed as 1.0 | 0.8 | 0.75);
+          }
+        }
+      } catch {
+        // Keep initial fallback
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleKeyPress = (char: string) => {
     setTypedWord((prev) => prev + char);
@@ -50,7 +107,7 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
 
   const handlePlayCustomerAudio = async () => {
     setIsPlayingCustomerAudio(true);
-    await ApiClient.playPromptAudio('pani-puri-order', speed);
+    await ApiClient.playPromptAudio(drillData.audioClipId, speed);
     setTimeout(() => {
       setIsPlayingCustomerAudio(false);
     }, 2500);
@@ -63,23 +120,31 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
   const handleServeOrder = async () => {
     if (!typedWord.trim()) return;
 
-    const result = await ApiClient.checkDevanagariAnswer('STREET_FOOD', typedWord, EXPECTED_WORD);
+    const result = await ApiClient.checkDevanagariAnswer(
+      'STREET_FOOD',
+      typedWord,
+      drillData.expectedWord
+    );
+
     if (result.isCorrect) {
       triggerSuccessHaptic();
-      addXp(result.xpAwarded);
+      const awarded = result.xpAwarded || drillData.xpAward;
+      addXp(awarded);
       incrementStreak();
       completeLevel('LEVEL_3');
+      await ApiClient.completeQuestLevel('LEVEL_3', 3, 100);
+
       setEvaluationState({
         submitted: true,
         isCorrect: true,
-        message: 'स्वाद आ गया! Perfect Spicy Pani Puri Served! +50 XP awarded.',
+        message: result.feedbackHindi || `स्वाद आ गया! Perfect Spicy Pani Puri Served! +${awarded} XP awarded.`,
       });
     } else {
       triggerWarningHaptic();
       setEvaluationState({
         submitted: true,
         isCorrect: false,
-        message: 'थोड़ा और सोचिए! The Hindi word for "Spicy" is तीखा.',
+        message: result.feedbackHindi || `थोड़ा और सोचिए! The Hindi word for "Spicy" is ${drillData.expectedWord}.`,
       });
     }
   };
@@ -93,7 +158,7 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
       />
 
       <SubHeaderHUD
-        lessonTitle="Street Food Kitchen • Order 3 of 5"
+        lessonTitle={drillData.categoryOverline}
         categoryOverline=""
         comboLabel="Streak: 3"
         progressPercent={60}
@@ -106,25 +171,24 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Location Banner */}
+        {/* Dynamic Location Banner */}
         <View style={styles.locationBanner}>
           <BrandLogoBadge size={36} />
           <View style={styles.locationTextColumn}>
-            <Text style={styles.locationOverline}>CUSTOMER AT COUNTER</Text>
-            <Text style={styles.locationTitle}>Pani Puri Cart • Old Delhi</Text>
+            <Text style={styles.locationOverline}>{drillData.locationOverline}</Text>
+            <Text style={styles.locationTitle}>{drillData.stallName}</Text>
           </View>
           <View style={styles.stallIconBadge}>
             <Text style={styles.stallIcon}>🏪</Text>
           </View>
         </View>
 
-        {/* Customer Request Card (Spoiler-Free) */}
+        {/* Dynamic Customer Request Card */}
         <View style={styles.requestCard}>
           <Text style={styles.requestPromptLabel}>
             Listen to the customer's request
           </Text>
 
-          {/* Large 52px Circular Speaker Button paired with 0.8x Pill */}
           <View style={styles.audioRow}>
             <TouchableOpacity
               style={[
@@ -148,22 +212,20 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Unspoiled Hindi Prompt Box */}
+          {/* Dynamic Prompt Sentence Box */}
           <View style={styles.promptSentenceBox}>
-            <Text style={styles.promptHindiSentence}>भैया, पानी पूरी थोड़ा</Text>
+            <Text style={styles.promptHindiSentence}>{drillData.promptLine1}</Text>
             <View style={styles.blankHighlightWrapper}>
               <Text style={styles.promptHindiSentence}>
                 <Text style={styles.blankBox}>
                   [ {typedWord.trim() ? typedWord : '_ _ _ _ _'} ]
                 </Text>{' '}
-                और कम मीठा
+                {drillData.promptLine2Post}
               </Text>
             </View>
-            <Text style={styles.promptHindiSentence}>बनाना।</Text>
+            <Text style={styles.promptHindiSentence}>{drillData.promptLine3}</Text>
 
-            <Text style={styles.promptEnglishSentence}>
-              "Make the Pani Puri a little [spicy] and less sweet."
-            </Text>
+            <Text style={styles.promptEnglishSentence}>{drillData.translation}</Text>
           </View>
         </View>
 
@@ -172,7 +234,7 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
           <Text style={styles.inputSectionHeader}>Active Devanagari Input</Text>
           <ActiveDevanagariInput
             value={typedWord}
-            placeholder="Type 'तीखा' here..."
+            placeholder={`Type '${drillData.expectedWord}' here...`}
             onBackspace={handleBackspace}
             onClear={handleClear}
           />
@@ -198,39 +260,25 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
             >
               {evaluationState.message}
             </Text>
-
-            {evaluationState.isCorrect && (
-              <TouchableOpacity
-                style={styles.bossButton}
-                onPress={() => router.push('/diwali-nani-boss')}
-                activeOpacity={0.85}
-              >
-                <Text style={styles.bossButtonText}>
-                  Proceed to Boss Level: Diwali Call with Nani 🪔 →
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
       </ScrollView>
 
-      {/* Docked Sage-Teal Action Button strictly above keyboard */}
+      {/* Docked Action Button */}
       <View style={styles.dockedButtonContainer}>
         <DockedTealButton
-          label="Serve Order →"
+          label={`Serve Pani Puri • +${drillData.xpAward} XP →`}
           onPress={handleServeOrder}
           disabled={!typedWord.trim()}
         />
       </View>
 
-      {/* Devanagari Virtual Keyboard matching Image 3 */}
+      {/* Street Food Variant Devanagari Virtual Keyboard */}
       <DevanagariKeyboard
         variant="streetfood"
-        ctaLabel="Serve"
         onKeyPress={handleKeyPress}
         onBackspace={handleBackspace}
         onClear={handleClear}
-        onSubmit={handleServeOrder}
       />
     </SafeAreaView>
   );
@@ -252,11 +300,11 @@ const styles = StyleSheet.create({
   locationBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FAF5EE',
+    backgroundColor: zenColors.cardWhite,
     borderRadius: zenRadius.md,
-    padding: zenSpacing.md,
     borderWidth: 1,
-    borderColor: '#EFE7DC',
+    borderColor: zenColors.borderWarm,
+    padding: zenSpacing.sm,
     marginBottom: zenSpacing.sm,
   },
   locationTextColumn: {
@@ -264,170 +312,148 @@ const styles = StyleSheet.create({
     marginLeft: zenSpacing.sm,
   },
   locationOverline: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: zenColors.ochreAccent,
-    letterSpacing: 0.8,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 9,
+    letterSpacing: 1,
+    color: zenColors.mutedBrown,
   },
   locationTitle: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 14,
     color: zenColors.espressoText,
+    marginTop: 2,
   },
   stallIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: zenColors.cardWhite,
+    backgroundColor: zenColors.surfaceSand,
+    borderRadius: 20,
+    width: 32,
+    height: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
   },
   stallIcon: {
-    fontSize: 18,
+    fontSize: 16,
   },
   requestCard: {
     backgroundColor: zenColors.cardWhite,
-    borderRadius: zenRadius.lg,
+    borderRadius: zenRadius.md,
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
     padding: zenSpacing.md,
     marginBottom: zenSpacing.sm,
-    shadowColor: zenColors.espressoText,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-    alignItems: 'center',
   },
   requestPromptLabel: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 11,
     color: zenColors.mutedBrown,
-    marginBottom: 10,
-    alignSelf: 'center',
+    marginBottom: zenSpacing.sm,
+    textAlign: 'center',
   },
   audioRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: zenSpacing.md,
-    gap: zenSpacing.sm,
   },
   speakerCircle: {
     width: 52,
     height: 52,
     borderRadius: 26,
-    backgroundColor: zenColors.terracotta,
+    backgroundColor: zenColors.surfaceSand,
+    borderWidth: 2,
+    borderColor: zenColors.borderWarm,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: zenColors.terracotta,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
+    marginRight: zenSpacing.sm,
   },
   speakerCircleActive: {
-    backgroundColor: '#A85A12',
+    borderColor: zenColors.ochreAccent,
+    backgroundColor: '#FDEFE5',
   },
   speakerIcon: {
     fontSize: 22,
-    color: zenColors.cardWhite,
   },
   speedPill: {
-    backgroundColor: '#F5EBE1',
+    backgroundColor: zenColors.surfaceSand,
+    borderRadius: 16,
     paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: zenRadius.pill,
+    paddingVertical: 6,
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
   },
   speedPillText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 12,
-    fontWeight: '700',
-    color: zenColors.ochreAccent,
+    color: zenColors.espressoText,
   },
   promptSentenceBox: {
-    width: '100%',
+    backgroundColor: zenColors.surfaceSand,
+    borderRadius: zenRadius.sm,
+    padding: zenSpacing.md,
     alignItems: 'center',
-    marginTop: 4,
   },
   promptHindiSentence: {
-    fontSize: 22,
-    fontWeight: '800',
+    fontFamily: 'NotoSansDevanagari_600SemiBold',
+    fontSize: 20,
+    lineHeight: 30,
     color: zenColors.espressoText,
-    lineHeight: 32,
     textAlign: 'center',
   },
   blankHighlightWrapper: {
-    backgroundColor: '#F6EAE0',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: zenRadius.sm,
     marginVertical: 4,
   },
   blankBox: {
-    color: zenColors.espressoText,
-    fontWeight: '800',
+    color: zenColors.ochreAccent,
+    fontFamily: 'NotoSansDevanagari_700Bold',
   },
   promptEnglishSentence: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 12,
     color: zenColors.mutedBrown,
     fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: zenSpacing.sm,
   },
   inputSection: {
-    marginVertical: zenSpacing.xs,
+    marginBottom: zenSpacing.xs,
   },
   inputSectionHeader: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: zenColors.espressoText,
-    marginBottom: 4,
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 10,
+    letterSpacing: 1,
+    color: zenColors.mutedBrown,
+    marginBottom: 6,
+    paddingLeft: 2,
   },
   evaluationBanner: {
-    borderRadius: zenRadius.md,
-    padding: zenSpacing.md,
-    marginVertical: zenSpacing.xs,
+    borderRadius: zenRadius.sm,
+    padding: zenSpacing.sm,
+    marginTop: 4,
+    marginBottom: zenSpacing.sm,
     borderWidth: 1,
   },
   evaluationSuccess: {
     backgroundColor: zenColors.surfaceMint,
-    borderColor: zenColors.sageTeal,
+    borderColor: zenColors.successGreen,
   },
   evaluationError: {
     backgroundColor: '#FDF2F2',
-    borderColor: '#E8A5A5',
+    borderColor: '#E74C3C',
   },
   evaluationText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
     textAlign: 'center',
   },
   evaluationSuccessText: {
-    color: zenColors.sageTeal,
+    color: zenColors.successGreen,
   },
   evaluationErrorText: {
-    color: zenColors.terracotta,
-  },
-  bossButton: {
-    backgroundColor: zenColors.sageTeal,
-    marginTop: 10,
-    paddingVertical: 12,
-    borderRadius: zenRadius.pill,
-    alignItems: 'center',
-  },
-  bossButtonText: {
-    color: zenColors.cardWhite,
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#C0392B',
   },
   dockedButtonContainer: {
     paddingHorizontal: zenSpacing.md,
-    paddingVertical: 8,
-    backgroundColor: zenColors.bgCream,
+    paddingBottom: 4,
   },
 });
 

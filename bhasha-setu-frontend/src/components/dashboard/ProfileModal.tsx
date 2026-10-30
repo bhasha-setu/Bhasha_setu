@@ -1,31 +1,95 @@
 // src/components/dashboard/ProfileModal.tsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { zenColors, zenRadius, zenSpacing } from '@/theme/zenTheme';
 import { useFrontendStore } from '@/store/useFrontendStore';
 import { BrandLogoBadge } from '@/components/menu/BrandLogoBadge';
+import { ApiClient } from '@/lib/api/client';
 
 export interface ProfileModalProps {
   visible: boolean;
   onClose: () => void;
 }
 
+const DEFAULT_DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+
 export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
   const { xp, streak, completedLevels, unlockedArtifacts } = useFrontendStore();
 
-  const stats = [
-    { label: 'Current Streak', value: `${streak} Days`, icon: '🔥', color: zenColors.terracotta },
-    { label: 'Total Experience', value: `${xp} XP`, icon: '⚡', color: zenColors.sageTeal },
-    { label: 'Mastered Quests', value: `${completedLevels.length}/4`, icon: '🗺️', color: zenColors.ochreAccent },
-    { label: 'Artifacts Found', value: `${unlockedArtifacts.length}/4`, icon: '🏺', color: '#27AE60' },
-  ];
+  const [profileData, setProfileData] = useState<{
+    name: string;
+    badge: string;
+    stats: Array<{ label: string; value: string; icon: string; color: string }>;
+  }>({
+    name: 'Hindi Explorer',
+    badge: 'Level 3 • Setu Spoken Pioneer',
+    stats: [
+      { label: 'Current Streak', value: `${streak} Days`, icon: '🔥', color: zenColors.terracotta },
+      { label: 'Total Experience', value: `${xp} XP`, icon: '⚡', color: zenColors.sageTeal },
+      { label: 'Mastered Quests', value: `${completedLevels.length}/4`, icon: '🗺️', color: zenColors.ochreAccent },
+      { label: 'Artifacts Found', value: `${unlockedArtifacts.length}/4`, icon: '🏺', color: '#27AE60' },
+    ],
+  });
 
-  const milestones = [
+  const [weeklyDays, setWeeklyDays] = useState<Array<{ day: string; isCompleted: boolean }>>(
+    DEFAULT_DAYS.map((d) => ({ day: d, isCompleted: true }))
+  );
+
+  const [milestones, setMilestones] = useState<Array<{ title: string; desc: string; done: boolean }>>([
     { title: 'Deewani Mastani Enunciation', desc: 'Active Lyric Recall Mastered', done: true },
     { title: 'Wankhede Commentary Cadence', desc: 'Match Thriller Spoken Drill Completed', done: true },
     { title: 'Chandni Chowk Bargainer', desc: 'Spontaneous Hindi Street Negotiation', done: completedLevels.includes('LEVEL_3') },
     { title: 'Nani Ki Ladli / Ladla', desc: '100% Respectful Tone & Fluency Dialogue', done: unlockedArtifacts.includes('golden-diya') },
-  ];
+  ]);
+
+  // Fetch dynamic profile and milestones from backend on open
+  useEffect(() => {
+    if (visible) {
+      let isMounted = true;
+      (async () => {
+        try {
+          const [prof, streakData, mileData] = await Promise.allSettled([
+            ApiClient.getUserProfile(),
+            ApiClient.getWeeklyPracticeStreak(),
+            ApiClient.getCulturalMilestones(),
+          ]);
+
+          if (isMounted) {
+            if (prof.status === 'fulfilled' && prof.value) {
+              setProfileData({
+                name: prof.value.profile?.name || 'Hindi Explorer',
+                badge: prof.value.profile?.title || 'Level 3 • Setu Spoken Pioneer',
+                stats: prof.value.stats || [
+                  { label: 'Current Streak', value: `${prof.value.profile?.streak ?? streak} Days`, icon: '🔥', color: zenColors.terracotta },
+                  { label: 'Total Experience', value: `${prof.value.profile?.xp ?? xp} XP`, icon: '⚡', color: zenColors.sageTeal },
+                  { label: 'Mastered Quests', value: `${prof.value.completedLevels?.length ?? completedLevels.length}/4`, icon: '🗺️', color: zenColors.ochreAccent },
+                  { label: 'Artifacts Found', value: `${prof.value.unlockedArtifacts?.length ?? unlockedArtifacts.length}/4`, icon: '🏺', color: '#27AE60' },
+                ],
+              });
+            }
+
+            if (streakData.status === 'fulfilled' && streakData.value?.days) {
+              setWeeklyDays(
+                streakData.value.days.map((d: any) => ({
+                  day: d.day,
+                  isCompleted: d.isCompleted,
+                }))
+              );
+            }
+
+            if (mileData.status === 'fulfilled' && mileData.value?.milestones) {
+              setMilestones(mileData.value.milestones);
+            }
+          }
+        } catch {
+          // Keep defaults
+        }
+      })();
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [visible, xp, streak, completedLevels, unlockedArtifacts]);
 
   return (
     <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
@@ -35,8 +99,8 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
             <View style={styles.profileInfo}>
               <BrandLogoBadge size={48} />
               <View style={styles.profileText}>
-                <Text style={styles.profileName}>Hindi Explorer</Text>
-                <Text style={styles.profileBadge}>Level 3 • Setu Spoken Pioneer</Text>
+                <Text style={styles.profileName}>{profileData.name}</Text>
+                <Text style={styles.profileBadge}>{profileData.badge}</Text>
               </View>
             </View>
 
@@ -46,9 +110,9 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Stats Grid */}
+            {/* Dynamic Stats Grid */}
             <View style={styles.statsGrid}>
-              {stats.map((s, idx) => (
+              {profileData.stats.map((s, idx) => (
                 <View key={idx} style={styles.statBox}>
                   <Text style={styles.statIcon}>{s.icon}</Text>
                   <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
@@ -57,27 +121,41 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
               ))}
             </View>
 
-            {/* Weekly Streak Tracker */}
+            {/* Dynamic Weekly Streak Tracker */}
             <View style={styles.streakCard}>
               <View style={styles.streakHeader}>
                 <Text style={styles.streakTitle}>Weekly Practice Streak</Text>
-                <Text style={styles.streakCount}>🔥 7 of 7 Days</Text>
+                <Text style={styles.streakCount}>
+                  🔥 {weeklyDays.filter((d) => d.isCompleted).length} of 7 Days
+                </Text>
               </View>
               <View style={styles.daysRow}>
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-                  <View key={i} style={styles.dayCircleActive}>
-                    <Text style={styles.dayLabelActive}>{day}</Text>
+                {weeklyDays.map((d, i) => (
+                  <View
+                    key={i}
+                    style={d.isCompleted ? styles.dayCircleActive : styles.dayCircleInactive}
+                  >
+                    <Text
+                      style={d.isCompleted ? styles.dayLabelActive : styles.dayLabelInactive}
+                    >
+                      {d.day}
+                    </Text>
                   </View>
                 ))}
               </View>
             </View>
 
-            {/* Cultural Milestones */}
+            {/* Dynamic Cultural Milestones */}
             <View style={styles.milestoneSection}>
               <Text style={styles.sectionTitle}>Cultural Spoken Milestones</Text>
               {milestones.map((m, i) => (
                 <View key={i} style={styles.milestoneRow}>
-                  <View style={[styles.checkCircle, m.done ? styles.checkDone : styles.checkPending]}>
+                  <View
+                    style={[
+                      styles.checkCircle,
+                      m.done ? styles.checkDone : styles.checkPending,
+                    ]}
+                  >
                     <Text style={styles.checkText}>{m.done ? '✓' : '○'}</Text>
                   </View>
                   <View style={styles.milestoneTexts}>
@@ -102,62 +180,58 @@ const styles = StyleSheet.create({
   },
   modalCard: {
     backgroundColor: zenColors.cardWhite,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: zenSpacing.lg,
-    maxHeight: '84%',
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
+    borderTopLeftRadius: zenRadius.lg,
+    borderTopRightRadius: zenRadius.lg,
+    padding: zenSpacing.md,
+    maxHeight: '82%',
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: zenSpacing.md,
   },
   profileInfo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: zenSpacing.sm,
   },
   profileText: {
-    marginLeft: 4,
+    marginLeft: zenSpacing.sm,
   },
   profileName: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 16,
     color: zenColors.espressoText,
   },
   profileBadge: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: zenColors.ochreAccent,
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 11,
+    color: zenColors.terracotta,
+    marginTop: 2,
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: zenColors.surfaceSand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeBtnText: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 14,
     color: zenColors.espressoText,
+    fontWeight: 'bold',
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: zenSpacing.sm,
     marginBottom: zenSpacing.md,
   },
   statBox: {
     width: '48%',
-    backgroundColor: '#FAF5EE',
-    borderRadius: zenRadius.md,
-    borderWidth: 1,
-    borderColor: '#EFE7DC',
+    backgroundColor: zenColors.surfaceSand,
+    borderRadius: zenRadius.sm,
     padding: zenSpacing.sm,
     alignItems: 'center',
   },
@@ -166,34 +240,36 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   statValue: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_800ExtraBold',
+    fontSize: 18,
   },
   statLabel: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 11,
     color: zenColors.mutedBrown,
     marginTop: 2,
   },
   streakCard: {
-    backgroundColor: '#F5EBE1',
-    borderRadius: zenRadius.md,
+    backgroundColor: zenColors.cardWhite,
+    borderRadius: zenRadius.sm,
+    borderWidth: 1,
+    borderColor: zenColors.borderWarm,
     padding: zenSpacing.md,
     marginBottom: zenSpacing.md,
   },
   streakHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
     marginBottom: zenSpacing.sm,
   },
   streakTitle: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 13,
-    fontWeight: '800',
     color: zenColors.espressoText,
   },
   streakCount: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 12,
-    fontWeight: '800',
     color: zenColors.terracotta,
   },
   daysRow: {
@@ -201,68 +277,82 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dayCircleActive: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: zenColors.sageTeal,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: zenColors.surfaceMint,
+    borderWidth: 1,
+    borderColor: zenColors.successGreen,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dayCircleInactive: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: zenColors.surfaceSand,
     alignItems: 'center',
     justifyContent: 'center',
   },
   dayLabelActive: {
-    color: zenColors.cardWhite,
-    fontSize: 12,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 11,
+    color: zenColors.successGreen,
+  },
+  dayLabelInactive: {
+    fontFamily: 'PlusJakartaSans_500Medium',
+    fontSize: 11,
+    color: zenColors.mutedBrown,
   },
   milestoneSection: {
-    marginBottom: zenSpacing.lg,
+    marginTop: zenSpacing.xs,
+    marginBottom: zenSpacing.md,
   },
   sectionTitle: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 13,
     color: zenColors.espressoText,
     marginBottom: zenSpacing.sm,
   },
   milestoneRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 8,
+    paddingVertical: 6,
     borderBottomWidth: 1,
-    borderBottomColor: '#F5EBE1',
+    borderBottomColor: zenColors.surfaceSand,
   },
   checkCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: zenSpacing.sm,
   },
   checkDone: {
-    backgroundColor: '#27AE60',
+    backgroundColor: zenColors.successGreen,
   },
   checkPending: {
     backgroundColor: zenColors.surfaceSand,
-    borderWidth: 1,
-    borderColor: zenColors.borderWarm,
   },
   checkText: {
-    fontSize: 12,
     color: zenColors.cardWhite,
-    fontWeight: '800',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   milestoneTexts: {
     flex: 1,
   },
   milestoneTitle: {
-    fontSize: 13,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 12,
     color: zenColors.espressoText,
   },
   milestoneDesc: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 11,
     color: zenColors.mutedBrown,
   },
 });
 
 export default ProfileModal;
-

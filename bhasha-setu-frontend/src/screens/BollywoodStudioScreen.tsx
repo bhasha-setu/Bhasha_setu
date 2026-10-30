@@ -1,11 +1,12 @@
 // src/screens/BollywoodStudioScreen.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,13 +29,68 @@ export const BollywoodStudioScreen: React.FC = () => {
   const [speed, setSpeed] = useState<1.0 | 0.8 | 0.75>(0.75);
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [showHint, setShowHint] = useState(false);
+  const [isLoadingDrill, setIsLoadingDrill] = useState(true);
+
+  // Dynamic Drill Metadata from Backend
+  const [drillData, setDrillData] = useState<{
+    expectedWord: string;
+    verseLine1: string;
+    verseLine2Post: string;
+    verseLine3: string;
+    translation: string;
+    phoneticHint: string;
+    audioClipId: string;
+    xpAward: number;
+    tagLabel: string;
+  }>({
+    expectedWord: 'दिल',
+    verseLine1: 'कभी कभी मेरे',
+    verseLine2Post: 'में ख़्याल',
+    verseLine3: 'आता है',
+    translation: '"Sometimes a thought comes into my [heart]"',
+    phoneticHint: 'Phonetic Clue: Rhymes with "Bill", starts with "द" (meaning "heart").',
+    audioClipId: 'kabhi-kabhi-lyric',
+    xpAward: 20,
+    tagLabel: '🎵 1976 CLASSIC',
+  });
+
   const [evaluationState, setEvaluationState] = useState<{
     submitted: boolean;
     isCorrect: boolean;
     message: string;
   } | null>(null);
 
-  const EXPECTED_WORD = 'दिल';
+  // Fetch dynamic drill configuration on screen mount
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const drill = await ApiClient.getDrill('BOLLYWOOD');
+        if (drill && isMounted) {
+          const lines = drill.metadata?.verseLines || ['कभी कभी मेरे', 'में ख़्याल', 'आता है'];
+          setDrillData({
+            expectedWord: drill.targetWord || 'दिल',
+            verseLine1: lines[0] || 'कभी कभी मेरे',
+            verseLine2Post: lines[1] || 'में ख़्याल',
+            verseLine3: lines[2] || 'आता है',
+            translation: drill.englishTranslation || '"Sometimes a thought comes into my [heart]"',
+            phoneticHint: drill.phoneticHint || 'Phonetic Clue: Rhymes with "Bill", starts with "द".',
+            audioClipId: drill.audioClipId || 'kabhi-kabhi-lyric',
+            xpAward: drill.xpAward || 20,
+            tagLabel: drill.categoryOverline || '🎵 1976 CLASSIC',
+          });
+          if (drill.defaultSpeed) {
+            setSpeed(drill.defaultSpeed as 1.0 | 0.8 | 0.75);
+          }
+        }
+      } finally {
+        if (isMounted) setIsLoadingDrill(false);
+      }
+    })();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleKeyPress = (char: string) => {
     setTypedWord((prev) => prev + char);
@@ -51,7 +107,7 @@ export const BollywoodStudioScreen: React.FC = () => {
 
   const handlePlayMelody = async () => {
     setIsPlayingAudio(true);
-    await ApiClient.playPromptAudio('kabhi-kabhi-lyric', speed);
+    await ApiClient.playPromptAudio(drillData.audioClipId, speed);
     setTimeout(() => {
       setIsPlayingAudio(false);
     }, 2800);
@@ -60,22 +116,27 @@ export const BollywoodStudioScreen: React.FC = () => {
   const handleCheckAnswer = async () => {
     if (!typedWord.trim()) return;
 
-    const result = await ApiClient.checkDevanagariAnswer('BOLLYWOOD', typedWord, EXPECTED_WORD);
+    const result = await ApiClient.checkDevanagariAnswer(
+      'BOLLYWOOD',
+      typedWord,
+      drillData.expectedWord
+    );
+
     if (result.isCorrect) {
       triggerSuccessHaptic();
-      addXp(result.xpAwarded);
+      addXp(result.xpAwarded || drillData.xpAward);
       completeLevel('LEVEL_1');
       setEvaluationState({
         submitted: true,
         isCorrect: true,
-        message: 'शानदार! Perfect recall! +20 XP awarded.',
+        message: result.feedbackHindi || `शानदार! Perfect recall! +${result.xpAwarded} XP awarded.`,
       });
     } else {
       triggerWarningHaptic();
       setEvaluationState({
         submitted: true,
         isCorrect: false,
-        message: 'करीब हैं! Think of the Hindi word for "Heart" (दिल).',
+        message: result.feedbackHindi || `करीब हैं! Think of the Hindi word for "Heart" (${drillData.expectedWord}).`,
       });
     }
   };
@@ -91,7 +152,7 @@ export const BollywoodStudioScreen: React.FC = () => {
       <SubHeaderHUD
         lessonTitle="Bollywood Studio"
         categoryOverline=""
-        comboLabel="+20 XP • 2x Combo"
+        comboLabel={`+${drillData.xpAward} XP • 2x Combo`}
         progressPercent={66}
         progressBarColor={zenColors.terracotta}
         showLogo={true}
@@ -102,12 +163,12 @@ export const BollywoodStudioScreen: React.FC = () => {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Lyric Prompt Card */}
+        {/* Dynamic Lyric Prompt Card */}
         <View style={styles.card}>
           <AudioSpeedPills
             label="Play melody"
             duration="0:05"
-            tagLabel="🎵 1976 CLASSIC"
+            tagLabel={drillData.tagLabel}
             playbackSpeed={speed}
             isPlaying={isPlayingAudio}
             onPlay={handlePlayMelody}
@@ -115,20 +176,18 @@ export const BollywoodStudioScreen: React.FC = () => {
           />
 
           <View style={styles.verseBox}>
-            <Text style={styles.verseText}>कभी कभी मेरे</Text>
+            <Text style={styles.verseText}>{drillData.verseLine1}</Text>
             <Text style={styles.verseText}>
               <Text style={styles.blankHighlight}>
                 {typedWord.trim() ? typedWord : '_ _ _ _ _ _ _'}
               </Text>{' '}
-              में ख़्याल
+              {drillData.verseLine2Post}
             </Text>
-            <Text style={styles.verseText}>आता है</Text>
-            <Text style={styles.translationText}>
-              "Sometimes a thought comes into my [blank]"
-            </Text>
+            <Text style={styles.verseText}>{drillData.verseLine3}</Text>
+            <Text style={styles.translationText}>{drillData.translation}</Text>
           </View>
 
-          {/* Hint Toggle */}
+          {/* Dynamic Hint Accordion */}
           <View style={styles.hintContainer}>
             <TouchableOpacity
               style={styles.hintButton}
@@ -142,15 +201,13 @@ export const BollywoodStudioScreen: React.FC = () => {
 
             {showHint && (
               <View style={styles.hintBox}>
-                <Text style={styles.hintText}>
-                  Phonetic Clue: Rhymes with "Bill", starts with "द" (meaning "heart").
-                </Text>
+                <Text style={styles.hintText}>{drillData.phoneticHint}</Text>
               </View>
             )}
           </View>
         </View>
 
-        {/* Input Section */}
+        {/* Dynamic Input Section */}
         <View style={styles.inputSection}>
           <Text style={styles.inputSectionTitle}>ACTIVE DEVANAGARI INPUT</Text>
           <ActiveDevanagariInput
@@ -161,7 +218,7 @@ export const BollywoodStudioScreen: React.FC = () => {
           />
         </View>
 
-        {/* Evaluation Banner */}
+        {/* Dynamic Evaluation Banner */}
         {evaluationState && (
           <View
             style={[
@@ -181,38 +238,25 @@ export const BollywoodStudioScreen: React.FC = () => {
             >
               {evaluationState.message}
             </Text>
-            {evaluationState.isCorrect && (
-              <TouchableOpacity
-                style={styles.continueButton}
-                onPress={() => router.push('/cricket-commentary')}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.continueButtonText}>
-                  Continue to Cricket Commentary →
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
       </ScrollView>
 
-      {/* Docked Action Button Strictly Above Keyboard */}
+      {/* Docked Submit Action Button */}
       <View style={styles.dockedButtonContainer}>
         <DockedTealButton
-          label="Check Answer • +20 XP →"
+          label={`Check Answer • +${drillData.xpAward} XP →`}
           onPress={handleCheckAnswer}
           disabled={!typedWord.trim()}
         />
       </View>
 
-      {/* Custom Devanagari Virtual Keyboard matching Image 1 */}
+      {/* Tactile Devanagari Mobile Keyboard */}
       <DevanagariKeyboard
         variant="bollywood"
-        ctaLabel="Check"
         onKeyPress={handleKeyPress}
         onBackspace={handleBackspace}
         onClear={handleClear}
-        onSubmit={handleCheckAnswer}
       />
     </SafeAreaView>
   );
@@ -233,121 +277,102 @@ const styles = StyleSheet.create({
   },
   card: {
     backgroundColor: zenColors.cardWhite,
-    borderRadius: zenRadius.lg,
+    borderRadius: zenRadius.md,
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
     padding: zenSpacing.md,
-    shadowColor: zenColors.espressoText,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
-    marginBottom: zenSpacing.sm,
+    marginBottom: zenSpacing.md,
   },
   verseBox: {
-    backgroundColor: '#FAF5EE',
-    borderRadius: zenRadius.md,
-    padding: zenSpacing.md,
-    marginVertical: zenSpacing.sm,
-    borderWidth: 1,
-    borderColor: '#EFE7DC',
-    alignItems: 'center',
+    marginTop: zenSpacing.md,
+    marginBottom: zenSpacing.sm,
+    paddingVertical: zenSpacing.xs,
   },
   verseText: {
+    fontFamily: 'NotoSansDevanagari_600SemiBold',
     fontSize: 22,
-    fontWeight: '800',
+    lineHeight: 34,
     color: zenColors.espressoText,
     textAlign: 'center',
-    lineHeight: 32,
   },
   blankHighlight: {
-    color: zenColors.ochreAccent,
+    color: zenColors.terracotta,
     textDecorationLine: 'underline',
-    fontWeight: '800',
   },
   translationText: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 13,
     color: zenColors.mutedBrown,
-    fontStyle: 'italic',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: zenSpacing.sm,
+    fontStyle: 'italic',
   },
   hintContainer: {
-    marginTop: 4,
+    marginTop: zenSpacing.xs,
     alignItems: 'center',
   },
   hintButton: {
     paddingVertical: 4,
+    paddingHorizontal: 8,
   },
   hintButtonText: {
+    fontFamily: 'PlusJakartaSans_600SemiBold',
     fontSize: 12,
-    fontWeight: '700',
-    color: zenColors.ochreAccent,
+    color: zenColors.sageTeal,
   },
   hintBox: {
-    backgroundColor: '#FFF8F0',
-    borderRadius: zenRadius.sm,
+    marginTop: 6,
     padding: zenSpacing.sm,
-    marginTop: 4,
-    borderWidth: 1,
-    borderColor: '#F3DEC2',
+    backgroundColor: zenColors.surfaceSand,
+    borderRadius: zenRadius.sm,
+    width: '100%',
   },
   hintText: {
+    fontFamily: 'PlusJakartaSans_500Medium',
     fontSize: 12,
     color: zenColors.espressoText,
-    lineHeight: 16,
+    textAlign: 'center',
   },
   inputSection: {
-    marginVertical: zenSpacing.xs,
+    marginBottom: zenSpacing.sm,
   },
   inputSectionTitle: {
+    fontFamily: 'PlusJakartaSans_700Bold',
     fontSize: 10,
-    fontWeight: '800',
-    color: zenColors.espressoText,
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    letterSpacing: 1,
+    color: zenColors.mutedBrown,
+    marginBottom: 6,
+    paddingLeft: 2,
   },
   evaluationBanner: {
-    borderRadius: zenRadius.md,
-    padding: zenSpacing.md,
-    marginVertical: zenSpacing.xs,
+    borderRadius: zenRadius.sm,
+    padding: zenSpacing.sm,
+    marginTop: zenSpacing.xs,
+    marginBottom: zenSpacing.sm,
     borderWidth: 1,
   },
   evaluationSuccess: {
     backgroundColor: zenColors.surfaceMint,
-    borderColor: zenColors.sageTeal,
+    borderColor: zenColors.successGreen,
   },
   evaluationError: {
     backgroundColor: '#FDF2F2',
-    borderColor: '#E8A5A5',
+    borderColor: '#E74C3C',
   },
   evaluationText: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'PlusJakartaSans_600SemiBold',
+    fontSize: 13,
     textAlign: 'center',
   },
   evaluationSuccessText: {
-    color: zenColors.sageTeal,
+    color: zenColors.successGreen,
   },
   evaluationErrorText: {
-    color: zenColors.terracotta,
-  },
-  continueButton: {
-    backgroundColor: zenColors.sageTeal,
-    marginTop: 8,
-    paddingVertical: 10,
-    borderRadius: zenRadius.pill,
-    alignItems: 'center',
-  },
-  continueButtonText: {
-    color: zenColors.cardWhite,
-    fontSize: 13,
-    fontWeight: '700',
+    color: '#C0392B',
   },
   dockedButtonContainer: {
     paddingHorizontal: zenSpacing.md,
-    paddingVertical: 8,
-    backgroundColor: zenColors.bgCream,
+    paddingBottom: 4,
   },
 });
 
