@@ -87,7 +87,7 @@ export default function RootLayout() {
   // Real smartphone dimensions (iPhone 16 Pro / Pixel 9 Pro 19.5:9 ratio)
   const PHONE_WIDTH = 393;
   const PHONE_HEIGHT = 844;
-  const availableHeight = height - 90;
+  const availableHeight = height - 40;
   const availableWidth = width - 40;
   const phoneScale = Math.min(
     1,
@@ -183,55 +183,6 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <StatusBar style="light" />
       <View style={styles.desktopWorkspace}>
-        {/* Top Control Bar */}
-        <View style={styles.desktopHeader}>
-          <View style={styles.headerBrandRow}>
-            <View style={styles.headerLogoBadge}>
-              <Text style={styles.headerLogoDevanagari}>अ</Text>
-              <Text style={styles.headerLogoLatin}>A</Text>
-            </View>
-            <View>
-              <Text style={styles.headerTitle}>भाषा सेतु • Bhasha Setu</Text>
-              <Text style={styles.headerSubtitle}>
-                Interactive Smartphone Mode • Click buttons or swipe like Duolingo
-              </Text>
-            </View>
-          </View>
-
-          {/* Screen Switcher Pills */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.navPillsContainer}
-          >
-            {SCREEN_NAV_OPTIONS.map((item) => {
-              const isActive = currentScreen === item.id;
-              return (
-                <TouchableOpacity
-                  key={item.id}
-                  style={[styles.navPill, isActive && styles.navPillActive]}
-                  onPress={() => setCurrentScreen(item.id)}
-                  activeOpacity={0.7}
-                >
-                  <Text style={styles.navPillIcon}>{item.icon}</Text>
-                  <Text
-                    style={[styles.navPillText, isActive && styles.navPillTextActive]}
-                  >
-                    {item.label}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-
-          {/* User Stats Badge */}
-          <View style={styles.headerStatsBadge}>
-            <Text style={styles.headerStatsText}>
-              🔥 {streak}d  •  ⭐ {xp} XP
-            </Text>
-          </View>
-        </View>
-
         {/* Scaled Real Phone Chassis Stage */}
         <View style={styles.phoneStage}>
           <View
@@ -374,9 +325,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#090A0D',
     alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingVertical: 10,
-    paddingHorizontal: 16,
+    justifyContent: 'center',
+    padding: 16,
     overflow: 'hidden',
   },
   desktopHeader: {

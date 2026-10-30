@@ -27,87 +27,120 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
     { title: 'Nani Ki Ladli / Ladla', desc: '100% Respectful Tone & Fluency Dialogue', done: unlockedArtifacts.includes('golden-diya') },
   ];
 
-  return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <View style={styles.headerRow}>
-            <View style={styles.profileInfo}>
-              <BrandLogoBadge size={48} />
-              <View style={styles.profileText}>
-                <Text style={styles.profileName}>Hindi Explorer</Text>
-                <Text style={styles.profileBadge}>Level 3 • Setu Spoken Pioneer</Text>
-              </View>
-            </View>
+  if (!visible) return null;
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
+  return (
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity
+        style={styles.backdropDismiss}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+      <View style={styles.modalCard}>
+        <View style={styles.dragHandleBar}>
+          <View style={styles.dragHandle} />
+        </View>
+        <View style={styles.headerRow}>
+          <View style={styles.profileInfo}>
+            <BrandLogoBadge size={48} />
+            <View style={styles.profileText}>
+              <Text style={styles.profileName}>Hindi Explorer</Text>
+              <Text style={styles.profileBadge}>Level 3 • Setu Spoken Pioneer</Text>
+            </View>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Stats Grid */}
-            <View style={styles.statsGrid}>
-              {stats.map((s, idx) => (
-                <View key={idx} style={styles.statBox}>
-                  <Text style={styles.statIcon}>{s.icon}</Text>
-                  <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
-                  <Text style={styles.statLabel}>{s.label}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Weekly Streak Tracker */}
-            <View style={styles.streakCard}>
-              <View style={styles.streakHeader}>
-                <Text style={styles.streakTitle}>Weekly Practice Streak</Text>
-                <Text style={styles.streakCount}>🔥 7 of 7 Days</Text>
-              </View>
-              <View style={styles.daysRow}>
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
-                  <View key={i} style={styles.dayCircleActive}>
-                    <Text style={styles.dayLabelActive}>{day}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Cultural Milestones */}
-            <View style={styles.milestoneSection}>
-              <Text style={styles.sectionTitle}>Cultural Spoken Milestones</Text>
-              {milestones.map((m, i) => (
-                <View key={i} style={styles.milestoneRow}>
-                  <View style={[styles.checkCircle, m.done ? styles.checkDone : styles.checkPending]}>
-                    <Text style={styles.checkText}>{m.done ? '✓' : '○'}</Text>
-                  </View>
-                  <View style={styles.milestoneTexts}>
-                    <Text style={styles.milestoneTitle}>{m.title}</Text>
-                    <Text style={styles.milestoneDesc}>{m.desc}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
         </View>
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Stats Grid */}
+          <View style={styles.statsGrid}>
+            {stats.map((s, idx) => (
+              <View key={idx} style={styles.statBox}>
+                <Text style={styles.statIcon}>{s.icon}</Text>
+                <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Weekly Streak Tracker */}
+          <View style={styles.streakCard}>
+            <View style={styles.streakHeader}>
+              <Text style={styles.streakTitle}>Weekly Practice Streak</Text>
+              <Text style={styles.streakCount}>🔥 7 of 7 Days</Text>
+            </View>
+            <View style={styles.daysRow}>
+              {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                <View key={i} style={styles.dayCircleActive}>
+                  <Text style={styles.dayLabelActive}>{day}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Cultural Milestones */}
+          <View style={styles.milestoneSection}>
+            <Text style={styles.sectionTitle}>Cultural Spoken Milestones</Text>
+            {milestones.map((m, i) => (
+              <View key={i} style={styles.milestoneRow}>
+                <View style={[styles.checkCircle, m.done ? styles.checkDone : styles.checkPending]}>
+                  <Text style={styles.checkText}>{m.done ? '✓' : '○'}</Text>
+                </View>
+                <View style={styles.milestoneTexts}>
+                  <Text style={styles.milestoneTitle}>{m.title}</Text>
+                  <Text style={styles.milestoneDesc}>{m.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(44, 26, 14, 0.55)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(28, 16, 9, 0.65)',
     justifyContent: 'flex-end',
+    zIndex: 200,
+  },
+  backdropDismiss: {
+    flex: 1,
+    width: '100%',
+  },
+  dragHandleBar: {
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1C7BD',
   },
   modalCard: {
     backgroundColor: zenColors.cardWhite,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: zenSpacing.lg,
-    maxHeight: '84%',
+    paddingBottom: zenSpacing.xl + 12,
+    maxHeight: '80%',
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 24,
   },
   headerRow: {
     flexDirection: 'row',

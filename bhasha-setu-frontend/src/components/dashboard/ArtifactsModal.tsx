@@ -51,84 +51,117 @@ export const ArtifactsModal: React.FC<ArtifactsModalProps> = ({ visible, onClose
     },
   ];
 
+  if (!visible) return null;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <View style={styles.modalHeader}>
-            <View>
-              <Text style={styles.modalOverline}>BHASHA SETU ARCHIVE</Text>
-              <Text style={styles.modalTitle}>Cultural Artifacts Shelf</Text>
-            </View>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity
+        style={styles.backdropDismiss}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+      <View style={styles.modalCard}>
+        <View style={styles.dragHandleBar}>
+          <View style={styles.dragHandle} />
+        </View>
+        <View style={styles.modalHeader}>
+          <View>
+            <Text style={styles.modalOverline}>BHASHA SETU ARCHIVE</Text>
+            <Text style={styles.modalTitle}>Cultural Artifacts Shelf</Text>
           </View>
+          <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
 
-          <Text style={styles.modalSubtitle}>
-            Artifacts unlocked through 100% active recall and spoken dialogue.
-          </Text>
+        <Text style={styles.modalSubtitle}>
+          Artifacts unlocked through 100% active recall and spoken dialogue.
+        </Text>
 
-          <ScrollView style={styles.scrollList} showsVerticalScrollIndicator={false}>
-            {allArtifacts.map((item) => (
-              <View
-                key={item.id}
-                style={[
-                  styles.artifactCard,
-                  item.unlocked ? styles.artifactCardUnlocked : styles.artifactCardLocked,
-                ]}
-              >
-                <View style={styles.iconCircle}>
-                  <Text style={styles.artifactIcon}>{item.icon}</Text>
-                  <View
-                    style={[
-                      styles.statusDot,
-                      item.unlocked ? styles.statusDotCheck : styles.statusDotLock,
-                    ]}
-                  >
-                    <Text style={styles.statusDotText}>{item.unlocked ? '✓' : '🔒'}</Text>
-                  </View>
-                </View>
-
-                <View style={styles.artifactDetails}>
-                  <View style={styles.titleRow}>
-                    <Text style={styles.artifactName}>{item.name}</Text>
-                    <Text
-                      style={[
-                        styles.badgeTag,
-                        item.unlocked ? styles.badgeTagUnlocked : styles.badgeTagLocked,
-                      ]}
-                    >
-                      {item.unlocked ? 'Unlocked' : 'Locked'}
-                    </Text>
-                  </View>
-                  <Text style={styles.levelLabel}>{item.level}</Text>
-                  <Text style={styles.descriptionText}>{item.description}</Text>
-                  <Text style={styles.bonusText}>{item.bonus}</Text>
+        <ScrollView style={styles.scrollList} showsVerticalScrollIndicator={false}>
+          {allArtifacts.map((item) => (
+            <View
+              key={item.id}
+              style={[
+                styles.artifactCard,
+                item.unlocked ? styles.artifactCardUnlocked : styles.artifactCardLocked,
+              ]}
+            >
+              <View style={styles.iconCircle}>
+                <Text style={styles.artifactIcon}>{item.icon}</Text>
+                <View
+                  style={[
+                    styles.statusDot,
+                    item.unlocked ? styles.statusDotCheck : styles.statusDotLock,
+                  ]}
+                >
+                  <Text style={styles.statusDotText}>{item.unlocked ? '✓' : '🔒'}</Text>
                 </View>
               </View>
-            ))}
-          </ScrollView>
-        </View>
+
+              <View style={styles.artifactDetails}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.artifactName}>{item.name}</Text>
+                  <Text
+                    style={[
+                      styles.badgeTag,
+                      item.unlocked ? styles.badgeTagUnlocked : styles.badgeTagLocked,
+                    ]}
+                  >
+                    {item.unlocked ? 'Unlocked' : 'Locked'}
+                  </Text>
+                </View>
+                <Text style={styles.levelLabel}>{item.level}</Text>
+                <Text style={styles.descriptionText}>{item.description}</Text>
+                <Text style={styles.bonusText}>{item.bonus}</Text>
+              </View>
+            </View>
+          ))}
+        </ScrollView>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(44, 26, 14, 0.55)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(28, 16, 9, 0.65)',
     justifyContent: 'flex-end',
+    zIndex: 200,
+  },
+  backdropDismiss: {
+    flex: 1,
+    width: '100%',
+  },
+  dragHandleBar: {
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1C7BD',
   },
   modalCard: {
     backgroundColor: zenColors.cardWhite,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
     padding: zenSpacing.lg,
-    maxHeight: '82%',
+    paddingBottom: zenSpacing.xl + 12,
+    maxHeight: '80%',
     borderWidth: 1,
     borderColor: zenColors.borderWarm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 24,
   },
   modalHeader: {
     flexDirection: 'row',

@@ -150,6 +150,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: zenColors.bgCream,
+    position: 'relative',
+    overflow: 'hidden',
   },
   scrollView: {
     flex: 1,
