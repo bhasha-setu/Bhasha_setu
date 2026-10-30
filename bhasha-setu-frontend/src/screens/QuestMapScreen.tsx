@@ -15,12 +15,24 @@ import { MilestoneChestBar } from '@/components/dashboard/MilestoneChestBar';
 import { ArtifactsModal } from '@/components/dashboard/ArtifactsModal';
 import { ProfileModal } from '@/components/dashboard/ProfileModal';
 
-export const QuestMapScreen: React.FC = () => {
+export interface QuestMapScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const QuestMapScreen: React.FC<QuestMapScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const { xp, streak, unlockedArtifacts } = useFrontendStore();
   const [activeTab, setActiveTab] = useState<BottomTabType>('quest');
   const [showArtifactsModal, setShowArtifactsModal] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const goTo = (screen: string) => {
+    if (onNavigate) {
+      onNavigate(screen);
+    } else {
+      router.push(`/${screen}` as any);
+    }
+  };
 
   const handleTabPress = (tab: BottomTabType) => {
     setActiveTab(tab);
@@ -67,7 +79,7 @@ export const QuestMapScreen: React.FC = () => {
           icon="🎬"
           title="Zen Bollywood Studio"
           subtitle="Dialogue & Spontaneous Enunciation"
-          onPress={() => router.push('/bollywood-studio')}
+          onPress={() => goTo('bollywood-studio')}
         />
 
         {/* Level 2: Mastered (Indented Right) */}
@@ -80,7 +92,7 @@ export const QuestMapScreen: React.FC = () => {
           title="Zen Cricket Commentary"
           subtitle="Fast-Action Sentence Framing"
           isIndented={true}
-          onPress={() => router.push('/cricket-commentary')}
+          onPress={() => goTo('cricket-commentary')}
         />
 
         {/* Level 3: Active Quest (Highlighted Teal Border) */}
@@ -93,7 +105,7 @@ export const QuestMapScreen: React.FC = () => {
           title="Level 3: Street Food Masterchef"
           subtitle="Order authentic chaat and negotiate portions using zero English crutches."
           ctaLabel="Play Quest • +50 XP →"
-          onPress={() => router.push('/street-food')}
+          onPress={() => goTo('street-food')}
         />
 
         {/* Boss Quest: Diwali WhatsApp Call with Nani */}
@@ -104,7 +116,7 @@ export const QuestMapScreen: React.FC = () => {
           icon="🔒"
           title="Diwali WhatsApp Call with Nani"
           subtitle="Master 3-Minute Live Dialogue Flow"
-          onPress={() => router.push('/diwali-nani-boss')}
+          onPress={() => goTo('diwali-nani-boss')}
         />
 
         {/* Milestone Chest Bar */}

@@ -403,3 +403,4 @@ npx expo start --web
 ### Production Build Commands
 - **Android APK / AAB:** `cd bhasha-setu-frontend && npx expo run:android --variant release`
 - **Dockerized AI Backend:** `cd bhasha-setu-AI && docker build -t bhasha-setu-ai:latest .`
+

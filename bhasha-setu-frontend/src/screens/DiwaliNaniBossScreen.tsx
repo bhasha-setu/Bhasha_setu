@@ -20,9 +20,21 @@ import { GoldenDiyaLootCard } from '@/components/chat/GoldenDiyaLootCard';
 import { TerracottaMicButton } from '@/components/buttons/TerracottaMicButton';
 import { triggerKeycapHaptic, triggerSuccessHaptic } from '@/lib/services/hapticsService';
 
-export const DiwaliNaniBossScreen: React.FC = () => {
+export interface DiwaliNaniBossScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const DiwaliNaniBossScreen: React.FC<DiwaliNaniBossScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const { chatHistory, addChatMessage, addXp, unlockArtifact, completeLevel } = useFrontendStore();
+
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
+  };
 
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -103,7 +115,7 @@ export const DiwaliNaniBossScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <TopScreenBar
         title="Boss Level: Diwali Call With Nani"
-        onBack={() => router.replace('/quest-map')}
+        onBack={handleBack}
       />
 
       {/* Nani Contact Card Header */}
@@ -167,7 +179,7 @@ export const DiwaliNaniBossScreen: React.FC = () => {
         <GoldenDiyaLootCard
           containerRef={lootCardRef}
           culturalXp={100}
-          onNextQuest={() => router.push('/quest-map')}
+          onNextQuest={handleBack}
         />
       </ScrollView>
 

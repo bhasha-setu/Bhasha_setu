@@ -13,7 +13,11 @@ import { useRouter } from 'expo-router';
 import { zenColors, zenRadius, zenSpacing } from '@/theme/zenTheme';
 import { SoundwaveBars } from '@/components/menu/BrandLogoBadge';
 
-export const SplashLoadingScreen: React.FC = () => {
+export interface SplashLoadingScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const SplashLoadingScreen: React.FC<SplashLoadingScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const [progress, setProgress] = useState(15);
   const progressAnim = React.useRef(new Animated.Value(15)).current;
@@ -41,51 +45,56 @@ export const SplashLoadingScreen: React.FC = () => {
   useEffect(() => {
     if (progress >= 100) {
       const timeout = setTimeout(() => {
-        router.replace('/quest-map');
+        if (onNavigate) {
+          onNavigate('quest-map');
+        } else {
+          router.replace('/quest-map');
+        }
       }, 450);
       return () => clearTimeout(timeout);
     }
-  }, [progress, router]);
+  }, [progress, router, onNavigate]);
 
   const handleStartNow = () => {
-    router.replace('/quest-map');
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
   };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Top Spacer */}
-        <View style={styles.topSpacer} />
+        {/* Centered Hero Content */}
+        <View style={styles.centerWrapper}>
+          {/* Central Elevated Circle (190px x 190px) */}
+          <View style={styles.heroCircle}>
+            <View style={styles.logoMarkRow}>
+              <Text style={styles.devanagariA}>अ</Text>
+              <View style={styles.archBridge}>
+                <View style={styles.archBridgeCurve} />
+              </View>
+              <Text style={styles.latinA}>A</Text>
+            </View>
 
-        {/* Central Elevated Circle (190px x 190px) */}
-        <View style={styles.heroCircle}>
-          <View style={styles.logoMarkRow}>
-            <Text style={styles.devanagariA}>अ</Text>
-            <View style={styles.archBridge} />
-            <Text style={styles.latinA}>A</Text>
+            <View style={styles.soundwaveInCircle}>
+              <SoundwaveBars size="lg" isAnimating={true} colorMode="dual" />
+            </View>
+
+            <Text style={styles.bridgeSubtext}>सेतु • BHASHA SETU</Text>
           </View>
 
-          <View style={styles.soundwaveInCircle}>
-            <SoundwaveBars size="sm" isAnimating={true} colorMode="dual" />
+          {/* Dual-Tone Headings */}
+          <View style={styles.titleContainer}>
+            <Text style={styles.mainTitle}>
+              <Text style={styles.hindiTitle}>भाषा सेतु</Text>
+              <Text style={styles.dotDivider}> • </Text>
+              <Text style={styles.englishTitle}>Bhasha Setu</Text>
+            </Text>
+            <Text style={styles.subtitle}>The Language Bridge</Text>
+            <Text style={styles.tagline}>Connecting Script to Spontaneous Speech</Text>
           </View>
-
-          <Text style={styles.bridgeSubtext}>सेतु • BHASHA SETU</Text>
-        </View>
-
-        {/* Dual-Tone Headings */}
-        <View style={styles.titleContainer}>
-          <Text style={styles.mainTitle}>
-            <Text style={styles.hindiTitle}>भाषा सेतु</Text>
-            <Text style={styles.dotDivider}> • </Text>
-            <Text style={styles.englishTitle}>Bhasha Setu</Text>
-          </Text>
-          <Text style={styles.subtitle}>The Language Bridge</Text>
-          <Text style={styles.tagline}>Connecting Script to Spontaneous Speech</Text>
-        </View>
-
-        {/* Center Animated Large Soundwave */}
-        <View style={styles.largeSoundwaveContainer}>
-          <SoundwaveBars size="lg" isAnimating={true} colorMode="dual" />
         </View>
 
         {/* Bottom Loading Card */}
@@ -139,10 +148,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: zenSpacing.lg,
+    paddingTop: 16,
     paddingBottom: zenSpacing.lg,
   },
-  topSpacer: {
-    height: 12,
+  centerWrapper: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingVertical: zenSpacing.md,
   },
   heroCircle: {
     width: 190,
@@ -172,12 +186,22 @@ const styles = StyleSheet.create({
     color: zenColors.ochreAccent,
   },
   archBridge: {
-    width: 22,
-    height: 4,
-    backgroundColor: zenColors.espressoText,
-    borderRadius: 2,
+    width: 26,
+    height: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginHorizontal: 4,
-    marginBottom: 8,
+    marginBottom: 6,
+  },
+  archBridgeCurve: {
+    width: 22,
+    height: 10,
+    borderTopLeftRadius: 11,
+    borderTopRightRadius: 11,
+    borderTopWidth: 3.5,
+    borderLeftWidth: 2.5,
+    borderRightWidth: 2.5,
+    borderColor: zenColors.ochreAccent,
   },
   latinA: {
     fontSize: 52,

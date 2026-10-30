@@ -20,9 +20,29 @@ import { DevanagariKeyboard } from '@/components/inputs/DevanagariKeyboard';
 import { ApiClient } from '@/lib/api/client';
 import { triggerSuccessHaptic, triggerWarningHaptic } from '@/lib/services/hapticsService';
 
-export const BollywoodStudioScreen: React.FC = () => {
+export interface BollywoodStudioScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const BollywoodStudioScreen: React.FC<BollywoodStudioScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const { xp, addXp, completeLevel } = useFrontendStore();
+
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
+  };
+
+  const handleNext = () => {
+    if (onNavigate) {
+      onNavigate('cricket-commentary');
+    } else {
+      router.push('/cricket-commentary');
+    }
+  };
 
   const [typedWord, setTypedWord] = useState('');
   const [speed, setSpeed] = useState<1.0 | 0.8 | 0.75>(0.75);
@@ -85,7 +105,7 @@ export const BollywoodStudioScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Bollywood Studio"
         rightIconType="profile"
-        onBack={() => router.replace('/quest-map')}
+        onBack={handleBack}
       />
 
       <SubHeaderHUD
@@ -184,7 +204,7 @@ export const BollywoodStudioScreen: React.FC = () => {
             {evaluationState.isCorrect && (
               <TouchableOpacity
                 style={styles.continueButton}
-                onPress={() => router.push('/cricket-commentary')}
+                onPress={handleNext}
                 activeOpacity={0.8}
               >
                 <Text style={styles.continueButtonText}>
