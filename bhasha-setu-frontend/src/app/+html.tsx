@@ -1,3 +1,4 @@
+
 // src/app/+html.tsx
 // Web root HTML template for Expo Router ensuring crisp typography, mobile meta tags, and app styling
 
@@ -30,7 +31,8 @@ export default function RootHtml({ children }: PropsWithChildren) {
 
         <ScrollViewStyleReset />
 
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           html, body {
             height: 100%;
             margin: 0;
