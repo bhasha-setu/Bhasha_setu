@@ -85,7 +85,7 @@ export const BollywoodStudioScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Bollywood Studio"
         rightIconType="profile"
-        onBack={() => router.push('/quest-map')}
+        onBack={() => router.replace('/quest-map')}
       />
 
       <SubHeaderHUD

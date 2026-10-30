@@ -78,7 +78,7 @@ export const CricketCommentaryScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Cricket Commentary"
         rightIconType="profile"
-        onBack={() => router.push('/quest-map')}
+        onBack={() => router.replace('/quest-map')}
       />
 
       <SubHeaderHUD

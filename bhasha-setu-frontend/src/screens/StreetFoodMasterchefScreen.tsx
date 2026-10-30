@@ -89,7 +89,7 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Street Food Masterchef"
         rightIconType="clipboard"
-        onBack={() => router.push('/quest-map')}
+        onBack={() => router.replace('/quest-map')}
       />
 
       <SubHeaderHUD

@@ -41,14 +41,14 @@ export const SplashLoadingScreen: React.FC = () => {
   useEffect(() => {
     if (progress >= 100) {
       const timeout = setTimeout(() => {
-        router.push('/quest-map');
+        router.replace('/quest-map');
       }, 450);
       return () => clearTimeout(timeout);
     }
   }, [progress, router]);
 
   const handleStartNow = () => {
-    router.push('/quest-map');
+    router.replace('/quest-map');
   };
 
   return (

@@ -103,7 +103,7 @@ export const DiwaliNaniBossScreen: React.FC = () => {
     <SafeAreaView style={styles.safeArea}>
       <TopScreenBar
         title="Boss Level: Diwali Call With Nani"
-        onBack={() => router.push('/quest-map')}
+        onBack={() => router.replace('/quest-map')}
       />
 
       {/* Nani Contact Card Header */}
