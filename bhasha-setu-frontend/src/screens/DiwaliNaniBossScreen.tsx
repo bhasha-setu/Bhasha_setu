@@ -21,7 +21,11 @@ import { ApiClient } from '@/lib/api/client';
 import { userSocketService } from '@/lib/websockets/user_services';
 import { triggerKeycapHaptic, triggerSuccessHaptic } from '@/lib/services/hapticsService';
 
-export const DiwaliNaniBossScreen: React.FC = () => {
+export interface DiwaliNaniBossScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const DiwaliNaniBossScreen: React.FC<DiwaliNaniBossScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const {
     chatHistory,
@@ -31,6 +35,14 @@ export const DiwaliNaniBossScreen: React.FC = () => {
     completeLevel,
     fetchChatHistory,
   } = useFrontendStore();
+
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
+  };
 
   const [inputText, setInputText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -174,9 +186,8 @@ export const DiwaliNaniBossScreen: React.FC = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <TopScreenBar
-        title="Diwali Nani Boss"
-        showBack={true}
-        onBack={() => router.replace('/quest-map')}
+        title="Boss Level: Diwali Call With Nani"
+        onBack={handleBack}
       />
 
       <ScrollView
@@ -218,6 +229,7 @@ export const DiwaliNaniBossScreen: React.FC = () => {
         {/* Golden Diya Loot Card (Unlocked upon completing conversation) */}
         <GoldenDiyaLootCard
           culturalXp={100}
+          onNextQuest={handleBack}
           onShareMilestone={() => {}}
         />
       </ScrollView>

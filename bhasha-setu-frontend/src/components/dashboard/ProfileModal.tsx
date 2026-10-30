@@ -1,6 +1,6 @@
 // src/components/dashboard/ProfileModal.tsx
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { zenColors, zenRadius, zenSpacing } from '@/theme/zenTheme';
 import { useFrontendStore } from '@/store/useFrontendStore';
 import { BrandLogoBadge } from '@/components/menu/BrandLogoBadge';
@@ -91,99 +91,134 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) 
     }
   }, [visible, xp, streak, completedLevels, unlockedArtifacts]);
 
-  return (
-    <Modal visible={visible} animationType="slide" transparent={true} onRequestClose={onClose}>
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalCard}>
-          <View style={styles.headerRow}>
-            <View style={styles.profileInfo}>
-              <BrandLogoBadge size={48} />
-              <View style={styles.profileText}>
-                <Text style={styles.profileName}>{profileData.name}</Text>
-                <Text style={styles.profileBadge}>{profileData.badge}</Text>
-              </View>
-            </View>
+  if (!visible) return null;
 
-            <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
-              <Text style={styles.closeBtnText}>✕</Text>
-            </TouchableOpacity>
+  return (
+    <View style={styles.modalOverlay}>
+      <TouchableOpacity
+        style={styles.backdropDismiss}
+        activeOpacity={1}
+        onPress={onClose}
+      />
+      <View style={styles.modalCard}>
+        <View style={styles.dragHandleBar}>
+          <View style={styles.dragHandle} />
+        </View>
+        <View style={styles.headerRow}>
+          <View style={styles.profileInfo}>
+            <BrandLogoBadge size={48} />
+            <View style={styles.profileText}>
+              <Text style={styles.profileName}>{profileData.name}</Text>
+              <Text style={styles.profileBadge}>{profileData.badge}</Text>
+            </View>
           </View>
 
-          <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Dynamic Stats Grid */}
-            <View style={styles.statsGrid}>
-              {profileData.stats.map((s, idx) => (
-                <View key={idx} style={styles.statBox}>
-                  <Text style={styles.statIcon}>{s.icon}</Text>
-                  <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
-                  <Text style={styles.statLabel}>{s.label}</Text>
-                </View>
-              ))}
-            </View>
-
-            {/* Dynamic Weekly Streak Tracker */}
-            <View style={styles.streakCard}>
-              <View style={styles.streakHeader}>
-                <Text style={styles.streakTitle}>Weekly Practice Streak</Text>
-                <Text style={styles.streakCount}>
-                  🔥 {weeklyDays.filter((d) => d.isCompleted).length} of 7 Days
-                </Text>
-              </View>
-              <View style={styles.daysRow}>
-                {weeklyDays.map((d, i) => (
-                  <View
-                    key={i}
-                    style={d.isCompleted ? styles.dayCircleActive : styles.dayCircleInactive}
-                  >
-                    <Text
-                      style={d.isCompleted ? styles.dayLabelActive : styles.dayLabelInactive}
-                    >
-                      {d.day}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-
-            {/* Dynamic Cultural Milestones */}
-            <View style={styles.milestoneSection}>
-              <Text style={styles.sectionTitle}>Cultural Spoken Milestones</Text>
-              {milestones.map((m, i) => (
-                <View key={i} style={styles.milestoneRow}>
-                  <View
-                    style={[
-                      styles.checkCircle,
-                      m.done ? styles.checkDone : styles.checkPending,
-                    ]}
-                  >
-                    <Text style={styles.checkText}>{m.done ? '✓' : '○'}</Text>
-                  </View>
-                  <View style={styles.milestoneTexts}>
-                    <Text style={styles.milestoneTitle}>{m.title}</Text>
-                    <Text style={styles.milestoneDesc}>{m.desc}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </ScrollView>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+            <Text style={styles.closeBtnText}>✕</Text>
+          </TouchableOpacity>
         </View>
+
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {/* Dynamic Stats Grid */}
+          <View style={styles.statsGrid}>
+            {profileData.stats.map((s, idx) => (
+              <View key={idx} style={styles.statBox}>
+                <Text style={styles.statIcon}>{s.icon}</Text>
+                <Text style={[styles.statValue, { color: s.color }]}>{s.value}</Text>
+                <Text style={styles.statLabel}>{s.label}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Dynamic Weekly Streak Tracker */}
+          <View style={styles.streakCard}>
+            <View style={styles.streakHeader}>
+              <Text style={styles.streakTitle}>Weekly Practice Streak</Text>
+              <Text style={styles.streakCount}>
+                🔥 {weeklyDays.filter((d) => d.isCompleted).length} of 7 Days
+              </Text>
+            </View>
+            <View style={styles.daysRow}>
+              {weeklyDays.map((d, i) => (
+                <View
+                  key={i}
+                  style={d.isCompleted ? styles.dayCircleActive : styles.dayCircleInactive}
+                >
+                  <Text
+                    style={d.isCompleted ? styles.dayLabelActive : styles.dayLabelInactive}
+                  >
+                    {d.day}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {/* Dynamic Cultural Milestones */}
+          <View style={styles.milestoneSection}>
+            <Text style={styles.sectionTitle}>Cultural Spoken Milestones</Text>
+            {milestones.map((m, i) => (
+              <View key={i} style={styles.milestoneRow}>
+                <View
+                  style={[
+                    styles.checkCircle,
+                    m.done ? styles.checkDone : styles.checkPending,
+                  ]}
+                >
+                  <Text style={styles.checkText}>{m.done ? '✓' : '○'}</Text>
+                </View>
+                <View style={styles.milestoneTexts}>
+                  <Text style={styles.milestoneTitle}>{m.title}</Text>
+                  <Text style={styles.milestoneDesc}>{m.desc}</Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        </ScrollView>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
   modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(44, 26, 14, 0.55)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(28, 16, 9, 0.65)',
     justifyContent: 'flex-end',
+    zIndex: 200,
+  },
+  backdropDismiss: {
+    flex: 1,
+    width: '100%',
+  },
+  dragHandleBar: {
+    alignItems: 'center',
+    paddingBottom: 8,
+  },
+  dragHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#D1C7BD',
   },
   modalCard: {
     backgroundColor: zenColors.cardWhite,
-    borderTopLeftRadius: zenRadius.lg,
-    borderTopRightRadius: zenRadius.lg,
-    padding: zenSpacing.md,
-    maxHeight: '82%',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: zenSpacing.lg,
+    paddingBottom: zenSpacing.xl + 12,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: zenColors.borderWarm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 18,
+    elevation: 24,
   },
   headerRow: {
     flexDirection: 'row',

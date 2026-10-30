@@ -1,6 +1,6 @@
 // src/screens/QuestMapScreen.tsx
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, ScrollView, ActivityIndicator, View } from 'react-native';
+import { StyleSheet, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { zenColors, zenSpacing } from '@/theme/zenTheme';
@@ -77,7 +77,11 @@ const FALLBACK_LEVELS: QuestLevelData[] = [
   },
 ];
 
-export const QuestMapScreen: React.FC = () => {
+export interface QuestMapScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const QuestMapScreen: React.FC<QuestMapScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const {
     xp,
@@ -85,7 +89,6 @@ export const QuestMapScreen: React.FC = () => {
     unlockedArtifacts,
     questMapData,
     fetchQuestMap,
-    isLoading,
   } = useFrontendStore();
 
   const [activeTab, setActiveTab] = useState<BottomTabType>('quest');
@@ -96,6 +99,15 @@ export const QuestMapScreen: React.FC = () => {
   useEffect(() => {
     fetchQuestMap();
   }, [fetchQuestMap]);
+
+  const goTo = (screenOrRoute: string) => {
+    const screenKey = screenOrRoute.replace(/^\//, '');
+    if (onNavigate) {
+      onNavigate(screenKey);
+    } else {
+      router.push(`/${screenKey}` as any);
+    }
+  };
 
   const handleTabPress = (tab: BottomTabType) => {
     setActiveTab(tab);
@@ -158,7 +170,7 @@ export const QuestMapScreen: React.FC = () => {
             ctaLabel={lvl.ctaLabel}
             xpReward={lvl.xpReward}
             isIndented={lvl.isIndented}
-            onPress={() => router.push(lvl.route as any)}
+            onPress={() => goTo(lvl.slug || lvl.route)}
           />
         ))}
 
@@ -193,6 +205,8 @@ const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: zenColors.bgCream,
+    position: 'relative',
+    overflow: 'hidden',
   },
   scrollView: {
     flex: 1,

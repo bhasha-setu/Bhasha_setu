@@ -25,9 +25,29 @@ import { ApiClient } from '@/lib/api/client';
 import { userSocketService } from '@/lib/websockets/user_services';
 import { triggerKeycapHaptic, triggerSuccessHaptic } from '@/lib/services/hapticsService';
 
-export const CricketCommentaryScreen: React.FC = () => {
+export interface CricketCommentaryScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const CricketCommentaryScreen: React.FC<CricketCommentaryScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const { xp, addXp, isSilentMode, toggleSilentMode, completeLevel } = useFrontendStore();
+
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
+  };
+
+  const handleNext = () => {
+    if (onNavigate) {
+      onNavigate('street-food');
+    } else {
+      router.push('/street-food');
+    }
+  };
 
   const [isRecording, setIsRecording] = useState(false);
   const [decibels, setDecibels] = useState(92);
@@ -146,7 +166,7 @@ export const CricketCommentaryScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Cricket Commentary"
         rightIconType="profile"
-        onBack={() => router.replace('/quest-map')}
+        onBack={handleBack}
       />
 
       <SubHeaderHUD
@@ -211,7 +231,7 @@ export const CricketCommentaryScreen: React.FC = () => {
             </Text>
             <TouchableOpacity
               style={styles.nextLevelButton}
-              onPress={() => router.push('/street-food')}
+              onPress={handleNext}
               activeOpacity={0.85}
             >
               <Text style={styles.nextLevelText}>

@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -21,9 +20,29 @@ import { DevanagariKeyboard } from '@/components/inputs/DevanagariKeyboard';
 import { ApiClient } from '@/lib/api/client';
 import { triggerSuccessHaptic, triggerWarningHaptic } from '@/lib/services/hapticsService';
 
-export const BollywoodStudioScreen: React.FC = () => {
+export interface BollywoodStudioScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const BollywoodStudioScreen: React.FC<BollywoodStudioScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const { xp, addXp, completeLevel } = useFrontendStore();
+
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
+  };
+
+  const handleNext = () => {
+    if (onNavigate) {
+      onNavigate('cricket-commentary');
+    } else {
+      router.push('/cricket-commentary');
+    }
+  };
 
   const [typedWord, setTypedWord] = useState('');
   const [speed, setSpeed] = useState<1.0 | 0.8 | 0.75>(0.75);
@@ -146,7 +165,7 @@ export const BollywoodStudioScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Bollywood Studio"
         rightIconType="profile"
-        onBack={() => router.replace('/quest-map')}
+        onBack={handleBack}
       />
 
       <SubHeaderHUD
@@ -238,6 +257,17 @@ export const BollywoodStudioScreen: React.FC = () => {
             >
               {evaluationState.message}
             </Text>
+            {evaluationState.isCorrect && (
+              <TouchableOpacity
+                style={styles.continueButton}
+                onPress={handleNext}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.continueButtonText}>
+                  Continue to Cricket Commentary →
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -369,6 +399,18 @@ const styles = StyleSheet.create({
   },
   evaluationErrorText: {
     color: '#C0392B',
+  },
+  continueButton: {
+    backgroundColor: zenColors.sageTeal,
+    borderRadius: zenRadius.sm,
+    paddingVertical: 10,
+    marginTop: 8,
+    alignItems: 'center',
+  },
+  continueButtonText: {
+    fontFamily: 'PlusJakartaSans_700Bold',
+    fontSize: 13,
+    color: zenColors.cardWhite,
   },
   dockedButtonContainer: {
     paddingHorizontal: zenSpacing.md,

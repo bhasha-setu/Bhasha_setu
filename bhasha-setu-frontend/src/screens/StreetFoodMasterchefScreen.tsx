@@ -20,9 +20,29 @@ import { DockedTealButton } from '@/components/buttons/DockedTealButton';
 import { ApiClient } from '@/lib/api/client';
 import { triggerSuccessHaptic, triggerWarningHaptic } from '@/lib/services/hapticsService';
 
-export const StreetFoodMasterchefScreen: React.FC = () => {
+export interface StreetFoodMasterchefScreenProps {
+  onNavigate?: (screen: string) => void;
+}
+
+export const StreetFoodMasterchefScreen: React.FC<StreetFoodMasterchefScreenProps> = ({ onNavigate }) => {
   const router = useRouter();
   const { xp, addXp, incrementStreak, completeLevel } = useFrontendStore();
+
+  const handleBack = () => {
+    if (onNavigate) {
+      onNavigate('quest-map');
+    } else {
+      router.replace('/quest-map');
+    }
+  };
+
+  const handleNext = () => {
+    if (onNavigate) {
+      onNavigate('diwali-nani-boss');
+    } else {
+      router.push('/diwali-nani-boss');
+    }
+  };
 
   const [typedWord, setTypedWord] = useState('');
   const [speed, setSpeed] = useState<1.0 | 0.8 | 0.75>(0.8);
@@ -154,7 +174,7 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
       <TopScreenBar
         title="Zen Street Food Masterchef"
         rightIconType="clipboard"
-        onBack={() => router.replace('/quest-map')}
+        onBack={handleBack}
       />
 
       <SubHeaderHUD
@@ -260,6 +280,18 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
             >
               {evaluationState.message}
             </Text>
+
+            {evaluationState.isCorrect && (
+              <TouchableOpacity
+                style={styles.bossButton}
+                onPress={handleNext}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.bossButtonText}>
+                  Proceed to Boss Level: Diwali Call with Nani 🪔 →
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </ScrollView>
@@ -276,9 +308,11 @@ export const StreetFoodMasterchefScreen: React.FC = () => {
       {/* Street Food Variant Devanagari Virtual Keyboard */}
       <DevanagariKeyboard
         variant="streetfood"
+        ctaLabel="Serve"
         onKeyPress={handleKeyPress}
         onBackspace={handleBackspace}
         onClear={handleClear}
+        onSubmit={handleServeOrder}
       />
     </SafeAreaView>
   );
@@ -450,6 +484,18 @@ const styles = StyleSheet.create({
   },
   evaluationErrorText: {
     color: '#C0392B',
+  },
+  bossButton: {
+    backgroundColor: zenColors.sageTeal,
+    marginTop: 10,
+    paddingVertical: 12,
+    borderRadius: zenRadius.pill,
+    alignItems: 'center',
+  },
+  bossButtonText: {
+    color: zenColors.cardWhite,
+    fontSize: 13,
+    fontWeight: '700',
   },
   dockedButtonContainer: {
     paddingHorizontal: zenSpacing.md,
