@@ -21,3 +21,4 @@ describe('TerracottaMicButton (React Native Component)', () => {
     expect(html).toContain('data-component="Animated.View"');
   });
 });
+

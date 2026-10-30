@@ -13,3 +13,4 @@ describe('RiverCrossingTrail (React Native Component)', () => {
     expect(html).toContain('Stage 3 of 4');
   });
 });
+

@@ -54,3 +54,4 @@ class NaniAgent(BaseAgent):
             "respect_detected": evaluation["respect_marker_used"] is not None,
             "golden_diya_awarded": evaluation["is_golden_diya_unlocked"],
         }
+

@@ -35,3 +35,4 @@ describe('shareStatusService', () => {
     expect(result.error).toBe('Capture failure');
   });
 });
+

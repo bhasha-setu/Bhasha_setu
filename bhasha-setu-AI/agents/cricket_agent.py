@@ -35,3 +35,4 @@ class CricketAgent(BaseAgent):
             "highlight_word": "छक्का!",
             "is_matched": is_crisp,
         }
+

@@ -49,3 +49,4 @@ class FluencyScorer:
             "feedback_summary": f"✓✓ {fluency_score}% Natural Fluency",
             "cadence_label": "natural cadence" if fluency_score >= 85 else "steady cadence",
         }
+

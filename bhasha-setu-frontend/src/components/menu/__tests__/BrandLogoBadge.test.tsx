@@ -14,3 +14,4 @@ describe('BrandLogoBadge and SoundwaveBars (React Native Component)', () => {
     expect(html).toContain('data-component="Animated.View"');
   });
 });
+

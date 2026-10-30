@@ -47,3 +47,4 @@ def test_prompt_metadata_endpoint():
     assert data["clip_id"] == "bollywood_kabhi_kabhi"
     assert data["playback_speed"] == 0.75
     assert data["effective_duration_sec"] > 5.0
+

@@ -28,3 +28,4 @@ def test_nani_agent_turn():
     assert result["respect_detected"] is True
     assert result["golden_diya_awarded"] is True
     assert "खीर" in result["reply_voice_note"]["text_hi"]
+

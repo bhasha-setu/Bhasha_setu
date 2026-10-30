@@ -42,3 +42,4 @@ def check_devanagari_answer(req: EvaluateAnswerRequest):
         combo_multiplier=2 if is_match else 1,
         feedback_message=msg,
     )
+

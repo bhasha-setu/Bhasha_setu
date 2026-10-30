@@ -40,3 +40,4 @@ def test_websocket_nani_user_text():
         assert data["event"] == "ai_voice_note"
         assert "खीर" in data["text_hi"]
         assert data["duration"] == "0:03"
+

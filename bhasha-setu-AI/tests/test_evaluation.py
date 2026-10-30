@@ -66,3 +66,4 @@ def test_evaluate_answer_incorrect():
     assert data["is_correct"] is False
     assert data["xp_awarded"] == 0
     assert data["combo_multiplier"] == 1
+

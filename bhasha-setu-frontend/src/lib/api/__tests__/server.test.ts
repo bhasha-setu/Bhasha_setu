@@ -46,3 +46,4 @@ describe('ApiServerAdapter', () => {
     expect(formatted.xpEarned).toBe(100);
   });
 });
+

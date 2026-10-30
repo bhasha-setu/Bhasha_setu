@@ -41,3 +41,4 @@ def evaluate_voice_turn(req: VoiceTurnRequest):
 def get_prompt_audio_metadata(clip_id: str, speed: float = 1.0):
     """Returns audio prompt metadata and speed adjusted durations (0.75x, 0.8x, 1.0x)."""
     return AudioGenerator.get_prompt_metadata(clip_id, speed)
+

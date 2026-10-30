@@ -27,3 +27,4 @@ describe('BottomTabBar (React Native Component)', () => {
     expect(onTabPress).toHaveBeenCalledWith('artifacts');
   });
 });
+

@@ -31,3 +31,4 @@ describe('SubHeaderHUD (React Native Component)', () => {
     expect(html).toContain('+20 XP • 2x Combo');
   });
 });
+
